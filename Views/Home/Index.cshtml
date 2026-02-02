@@ -1,0 +1,176 @@
+﻿@model FinanceTracker.Models.DashboardViewModel
+
+@{
+    ViewData["Title"] = "Dashboard";
+}
+
+<div class="main-content">
+    <header>
+        <h1>Good Morning, Harsha ;)</h1>
+        <p class="text-muted">Here's what's happening with your finances today.</p>
+    </header>
+
+    <div class="dashboard-grid">
+        <div class="finance-card">
+            <span>Total Balance</span>
+            <div class="balance-amount" style="color: @(Model.TotalBalance >= 0 ? "var(--accent-green)" : "var(--accent-red)")">
+                @Model.TotalBalance.ToString("C")
+            </div>
+            <small style="color: var(--accent-blue)">@Model.TotalChange View</small>
+        </div>
+
+        <div class="finance-card">
+            <span>Cash on Hand</span>
+            <div class="balance-amount" style="color: @(Model.CashBalance >= 0 ? "var(--accent-green)" : "var(--accent-red)")">
+                @Model.CashBalance.ToString("C")
+            </div>
+            <small>Live</small>
+        </div>
+
+        <div class="finance-card">
+            <span>Bank Account</span>
+            <div class="balance-amount" style="color: @(Model.BankBalance >= 0 ? "var(--accent-green)" : "var(--accent-red)")">
+                @Model.BankBalance.ToString("C")
+            </div>
+            <small>Live</small>
+        </div>
+    </div>
+
+    <div class="finance-card" style="margin-top: 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <h3 style="margin: 0; font-size: 1rem;">Monthly Budget Goal</h3>
+            <span style="color: var(--text-muted); font-size: 0.85rem;">
+                @ViewBag.ThisMonthSpend.ToString("C0") / @ViewBag.MonthlyGoal.ToString("C0")
+            </span>
+        </div>
+        <div style="width: 100%; height: 12px; background: #2D323A; border-radius: 10px; overflow: hidden;">
+            <div style="width: @ViewBag.BudgetPercent%; height: 100%;
+                        background: @(ViewBag.BudgetPercent > 90 ? "#FF5252" : "#007BFF");
+                        transition: width 0.5s ease-in-out;">
+            </div>
+        </div>
+        <small style="display: block; margin-top: 8px; color: var(--text-muted);">
+            @if (ViewBag.BudgetPercent >= 100)
+            {
+                <span style="color: #FF5252;">Budget Exceeded!</span>
+            }
+            else
+            {
+
+                <span>You have used @ViewBag.BudgetPercent.ToString("F1")% of your monthly limit.</span>
+            }
+        </small>
+    </div>
+
+    <div class="bottom-section" style="display: grid; grid-template-columns: 2fr 1.2fr; gap: 20px; margin-top: 20px;">
+
+        <div class="finance-card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <div>
+                    <h3 style="margin:0;">Recent Transactions</h3>
+                    <small style="color: var(--accent-blue)">@Model.TotalChange activity</small>
+                </div>
+                <a href="/Home/Create" style="color: var(--accent-blue); text-decoration: none; font-size: 0.9rem;">+ Add New</a>
+            </div>
+
+            @if (Model.RecentTransactions != null && Model.RecentTransactions.Any())
+            {
+                @foreach (var item in Model.RecentTransactions)
+                {
+                    <div class="transaction-row" style="display:flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #2D323A;">
+                        <div>
+                            <strong>@item.Title</strong><br />
+                            <small style="color: var(--text-muted)">@item.Category • @item.Source</small>
+                        </div>
+                        <div style="font-weight: bold; color: @(item.Type == "Gain" ? "var(--accent-green)" : "var(--accent-red)")">
+                            @(item.Type == "Gain" ? "+" : "-")@item.Amount.ToString("N2")
+                        </div>
+                    </div>
+                }
+            }
+            else
+            {
+                <p style="color: var(--text-muted); padding: 20px 0;">No transactions recorded for this period.</p>
+            }
+        </div>
+
+        <div class="finance-card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h3 style="margin:0;">Analysis</h3>
+                <select onchange="window.location.href='?timeframe=' + this.value"
+                        style="background: #2D323A; color: white; border: 1px solid #3F444E; border-radius: 6px; padding: 5px 8px; font-size: 0.85rem;">
+                    <option value="daily" selected="@(Model.TotalChange == "daily")">Today</option>
+                    <option value="weekly" selected="@(Model.TotalChange == "weekly")">Last 7 Days</option>
+                    <option value="monthly" selected="@(Model.TotalChange == "monthly")">Last 30 Days</option>
+                </select>
+            </div>
+
+            <div style="text-align: center; margin-bottom: 30px;">
+                <small style="color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px;">Spending</small>
+                <div style="position: relative; height: 180px; margin-top: 10px;">
+                    <canvas id="spendingDonut"></canvas>
+                    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); pointer-events: none;">
+                        <strong style="font-size: 1.1rem; color: #FF5252;">@Model.SpendingData.Values.Sum().ToString("C0")</strong>
+                    </div>
+                </div>
+            </div>
+
+            <hr style="border: 0; border-top: 1px solid #2D323A; margin: 20px 0;" />
+
+            <div style="text-align: center;">
+                <small style="color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px;">Gains</small>
+                <div style="position: relative; height: 180px; margin-top: 10px;">
+                    <canvas id="gainsDonut"></canvas>
+                    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); pointer-events: none;">
+                        <strong style="font-size: 1.1rem; color: #4CAF50;">@Model.GainsData.Values.Sum().ToString("C0")</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const options = {
+            cutout: '75%',
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } }
+        };
+
+        // --- Spending Chart (High-Contrast) ---
+        const ctxSpend = document.getElementById('spendingDonut')?.getContext('2d');
+        if (ctxSpend) {
+            new Chart(ctxSpend, {
+                type: 'doughnut',
+                data: {
+                    labels: @Html.Raw(Json.Serialize(Model.SpendingData.Keys)),
+                    datasets: [{
+                        data: @Html.Raw(Json.Serialize(Model.SpendingData.Values)),
+                        backgroundColor: ['#FF5252', '#FFEB3B', '#9C27B0', '#FF9800', '#E91E63'],
+                        borderWidth: 0
+                    }]
+                },
+                options: options
+            });
+        }
+
+        // --- Gains Chart (High-Contrast) ---
+        const ctxGain = document.getElementById('gainsDonut')?.getContext('2d');
+        if (ctxGain) {
+            new Chart(ctxGain, {
+                type: 'doughnut',
+                data: {
+                    labels: @Html.Raw(Json.Serialize(Model.GainsData.Keys)),
+                    datasets: [{
+                        data: @Html.Raw(Json.Serialize(Model.GainsData.Values)),
+                        backgroundColor: ['#4CAF50', '#03A9F4', '#CDDC39', '#00BCD4', '#8BC34A'],
+                        borderWidth: 0
+                    }]
+                },
+                options: options
+            });
+        }
+    });
+</script>

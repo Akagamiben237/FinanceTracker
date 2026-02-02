@@ -1,0 +1,21 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" href="/css/site.css" asp-append-version="true" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+</head>
+<body>
+    <div class="sidebar">
+        <h2>FinanceTracker</h2>
+        <nav>
+            <li><a href="/Home/">Dashboard</a></li>
+            <li><a href="/Home/Records">View All History</a></li>           
+          <li>  <a asp-action="ExportToCSV" color: white;">Download Records</a>
+            </li>
+            </a>
+        </nav>
+    </div>
+
+    @RenderBody()
+</body>
+</html>

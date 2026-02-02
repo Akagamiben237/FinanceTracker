@@ -1,0 +1,153 @@
+﻿@model FinanceTracker.Models.Transaction
+
+@{
+    // Helper to cast the ViewBag list once for the whole page
+    var transactionList = (List<FinanceTracker.Models.Transaction>)ViewBag.RecentTransactions;
+}
+
+<div class="main-content">
+    <div class="finance-card" style="margin-bottom: 20px;">
+        <label>Showing entries for:</label>
+        <input type="date" class="form-control"
+               value="@ViewBag.SelectedDate"
+               onchange="window.location.href='/Home/Create?date=' + this.value" />
+    </div>
+
+    <div class="finance-card">
+        <form asp-action="Create" method="post">
+            <input type="hidden" name="TransactionDate" value="@ViewBag.SelectedDate" />
+
+            <div class="dashboard-grid" style="grid-template-columns: 1fr 1fr; gap: 15px;">
+                <div class="form-group">
+                    <label>Amount</label>
+                    <input asp-for="Amount" type="number" step="0.01" class="form-control" autofocus required />
+                </div>
+                <div class="form-group">
+                    <label>Description (Title)</label>
+                    <input asp-for="Title" class="form-control" required placeholder="e.g., Dinner, Salary" />
+                </div>
+            </div>
+
+            <div class="dashboard-grid" style="grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-top: 10px;">
+                <div class="form-group">
+                    <label>Type</label>
+                    <select asp-for="Type" id="typeSelect" class="form-control">
+                        <option value="Loss">Loss (Spend)</option>
+                        <option value="Gain">Gain (Income)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Category</label>
+                    <select asp-for="Category" id="categorySelect" class="form-control">
+                        @* Expenses *@
+                        <option value="Food" data-type="Loss">🍕 Food / Dining</option>
+                        <option value="Fuel" data-type="Loss">⛽ Fuel / Transport</option>
+                        <option value="Grocery" data-type="Loss">🛒 Grocery</option>
+                        <option value="Rent" data-type="Loss">🏠 Rent / Housing</option>
+                        <option value="Medical" data-type="Loss">🏥 Health / Medical</option>
+
+                        @* Income *@
+                        <option value="Salary" data-type="Gain">💰 Salary</option>
+                        <option value="Business" data-type="Gain">🏢 Business Income</option>
+                        <option value="Freelance" data-type="Gain">🧑‍💻 Freelance / Side Hustle</option>
+                        <option value="Stocks" data-type="Gain">📈 Stocks / Trading</option>
+                        <option value="Dividends" data-type="Gain">💹 Dividends</option>
+                        <option value="Crypto" data-type="Gain">🪙 Crypto</option>
+                        <option value="Interest" data-type="Gain">🏦 Interest</option>
+                        <option value="RentalIncome" data-type="Gain">🏘️ Rental Income</option>
+
+                        <option value="Other" data-type="both">📦 Other</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Payment Source</label>
+                    <select asp-for="Source" class="form-control">
+                        <option value="Cash">Cash</option>
+                        <option value="Bank">Bank</option>
+                    </select>
+                </div>
+            </div>
+
+            <button type="submit" class="btn-primary" style="margin-top: 20px; width: 100%;">Save Transaction</button>
+        </form>
+    </div>
+
+    <div class="finance-card" style="margin-top: 30px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h3>
+                @if (ViewBag.ShowingLastUsedDate != null && !transactionList.Any(m => m.TransactionDate.ToString("yyyy-MM-dd") == ViewBag.SelectedDate))
+                {
+                    <span style="color: var(--text-muted); font-size: 0.85rem; font-weight: normal;">No entries for @ViewBag.SelectedDate. Last recorded:</span>
+                    <br />
+                    @ViewBag.ShowingLastUsedDate
+                }
+                else
+                {
+                    <span>Entries for @ViewBag.SelectedDate</span>
+                }
+            </h3>
+        </div>
+
+        @if (transactionList != null && transactionList.Any())
+        {
+            <div class="transaction-list">
+                @foreach (var item in transactionList)
+                {
+                    <div class="transaction-row" style="display:flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid #2D323A;">
+                        <div>
+                            <strong style="font-size: 1.05rem;">@item.Title</strong><br />
+                            <small style="color: var(--text-muted);">
+                                @item.Category • @item.Source • @item.TransactionDate.ToString("MMM dd")
+                            </small>
+                        </div>
+
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <div style="font-weight: bold; font-size: 1.1rem; color: @(item.Type == "Gain" ? "var(--accent-green)" : "var(--accent-red)")">
+                                @(item.Type == "Gain" ? "+" : "-")@item.Amount.ToString("N2")
+                            </div>
+
+                            <a href="/Home/Edit/@item.Id"
+                               style="color: var(--accent-blue); text-decoration: none; font-size: 0.9rem; border: 1px solid #3F444E; padding: 4px 12px; border-radius: 4px;">
+                                Edit
+                            </a>
+
+                            <a href="/Home/Delete/@item.Id?returnUrl=/Home/Create?date=@ViewBag.SelectedDate"
+                               style="color: var(--accent-red); text-decoration: none; font-size: 0.9rem; border: 1px solid #3F444E; padding: 4px 12px; border-radius: 4px;"
+                               onclick="return confirm('Delete this record?')">
+                                Delete
+                            </a>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <p style="color: var(--text-muted); padding: 20px 0; text-align: center;">No transactions found.</p>
+        }
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const typeSelect = document.getElementById('typeSelect');
+        const categorySelect = document.getElementById('categorySelect');
+        const options = Array.from(categorySelect.options);
+
+        function filterCategories() {
+            const selectedType = typeSelect.value;
+            categorySelect.innerHTML = "";
+
+            options.forEach(option => {
+                const optType = option.getAttribute('data-type');
+                if (optType === selectedType || optType === "both") {
+                    categorySelect.appendChild(option);
+                }
+            });
+        }
+
+        typeSelect.addEventListener('change', filterCategories);
+        filterCategories();
+    });
+</script>

@@ -1,0 +1,119 @@
+﻿@model FinanceTracker.Models.Transaction
+
+<div class="main-content">
+    <div class="finance-card" style="max-width: 600px; margin: 0 auto;">
+        <h3>Edit Transaction</h3>
+        <p style="color: var(--text-muted); margin-bottom: 20px;">Updating record ID: @Model.Id</p>
+        <hr style="border: 0.5px solid #3F444E; margin: 1rem 0;">
+
+        <form asp-action="Edit" method="post">
+            <input type="hidden" asp-for="Id" />
+            @* This hidden field ensures you redirect back to the previous page after saving *@
+            <input type="hidden" name="returnUrl" value="@Context.Request.Headers["Referer"]" />
+
+            <div class="form-group">
+                <label>Date</label>
+                <input asp-for="TransactionDate" type="date" class="form-control" required />
+            </div>
+
+            <div class="form-group">
+                <label>Description (Title)</label>
+                <input asp-for="Title" class="form-control" required />
+            </div>
+
+            <div class="dashboard-grid" style="grid-template-columns: 1fr 1fr; gap: 15px;">
+                <div class="form-group">
+                    <label>Amount</label>
+                    <input asp-for="Amount" type="number" step="0.01" class="form-control" required />
+                </div>
+                <div class="form-group">
+                    <label>Category</label>
+                    <select asp-for="Category" id="categorySelect" class="form-control">
+                        @* Expenses (Same as Create.cshtml) *@
+                        <option value="Food" data-type="Loss">🍕 Food / Dining</option>
+                        <option value="Fuel" data-type="Loss">⛽ Fuel / Transport</option>
+                        <option value="Grocery" data-type="Loss">🛒 Grocery</option>
+                        <option value="Rent" data-type="Loss">🏠 Rent / Housing</option>
+                        <option value="Medical" data-type="Loss">🏥 Health / Medical</option>
+
+                        @* Income (Same as Create.cshtml) *@
+                        <option value="Salary" data-type="Gain">💰 Salary</option>
+                        <option value="Business" data-type="Gain">🏢 Business Income</option>
+                        <option value="Freelance" data-type="Gain">🧑‍💻 Freelance / Side Hustle</option>
+                        <option value="Stocks" data-type="Gain">📈 Stocks / Trading</option>
+                        <option value="Dividends" data-type="Gain">💹 Dividends</option>
+                        <option value="Crypto" data-type="Gain">🪙 Crypto</option>
+                        <option value="Interest" data-type="Gain">🏦 Interest</option>
+                        <option value="RentalIncome" data-type="Gain">🏘️ Rental Income</option>
+
+                        <option value="Other" data-type="both">📦 Other</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="dashboard-grid" style="grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 10px;">
+                <div class="form-group">
+                    <label>Type</label>
+                    <select asp-for="Type" id="typeSelect" class="form-control">
+                        <option value="Loss">Loss (Spend)</option>
+                        <option value="Gain">Gain (Income)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Payment Source</label>
+                    <select asp-for="Source" class="form-control">
+                        <option value="Cash">Cash</option>
+                        <option value="Bank">Bank</option>
+                    </select>
+                </div>
+            </div>
+
+            <div style="margin-top: 30px;">
+                <button type="submit" class="btn-primary">Update Changes</button>
+                @* Smart Cancel: Goes back to the referer URL *@
+                <a href="@(Context.Request.Headers["Referer"].ToString() ?? "/Home/Records")"
+                   style="color: var(--text-muted); text-decoration: none; margin-left: 15px;">
+                    Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const typeSelect = document.getElementById('typeSelect');
+        const categorySelect = document.getElementById('categorySelect');
+        const options = Array.from(categorySelect.options);
+
+        // Capture the category currently saved in the database
+        const savedCategory = "@Model.Category";
+
+        function filterCategories() {
+            const selectedType = typeSelect.value;
+            categorySelect.innerHTML = "";
+
+            options.forEach(option => {
+                const optType = option.getAttribute('data-type');
+                if (optType === selectedType || optType === "both") {
+                    categorySelect.appendChild(option);
+                }
+            });
+
+            // Set the dropdown value back to what was originally saved
+            categorySelect.value = savedCategory;
+        }
+
+        // Listen for user changes
+        typeSelect.addEventListener('change', function() {
+            filterCategories();
+            // If they change Type, reset Category to first available to avoid mismatch
+            if(categorySelect.value === "") {
+                categorySelect.selectedIndex = 0;
+            }
+        });
+
+        // Run once on load to filter based on current Type
+        filterCategories();
+    });
+</script>

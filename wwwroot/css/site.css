@@ -1,0 +1,144 @@
+:root {
+    --bg-dark: #0B0E11;
+    --card-bg: #1A1D23;
+    --accent-blue: #3E7BFA;
+    --accent-green: #00C853;
+    --accent-red: #FF5252;
+    --text-main: #FFFFFF;
+    --text-muted: #8F959E;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background-color: var(--bg-dark);
+    color: var(--text-main);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    line-height: 1.6;
+}
+
+/* Sidebar Styling */
+.sidebar {
+    width: 240px;
+    height: 100vh;
+    background-color: var(--card-bg);
+    position: fixed;
+    padding: 2rem;
+}
+
+    .sidebar h2 {
+        color: var(--accent-blue);
+        margin-bottom: 2rem;
+        font-size: 1.5rem;
+    }
+
+.nav-links {
+    list-style: none;
+}
+
+    .nav-links li {
+        margin-bottom: 1rem;
+    }
+
+    .nav-links a {
+        color: var(--text-muted);
+        text-decoration: none;
+        transition: 0.3s;
+    }
+
+        .nav-links a:hover {
+            color: var(--accent-blue);
+        }
+
+/* Main Content Area */
+.main-content {
+    margin-left: 240px;
+    padding: 2rem;
+}
+
+/* Dashboard Cards */
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+    margin-top: 2rem;
+}
+
+.finance-card {
+    background-color: var(--card-bg);
+    padding: 1.5rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.balance-amount {
+    font-size: 2rem;
+    font-weight: bold;
+    margin-top: 0.5rem;
+}
+
+/* Transaction Table */
+.transaction-list {
+    margin-top: 2rem;
+    background-color: var(--card-bg);
+    border-radius: 12px;
+    padding: 1.5rem;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th {
+    text-align: left;
+    color: var(--text-muted);
+    padding-bottom: 1rem;
+}
+
+td {
+    padding: 1rem 0;
+    border-top: 1px solid #2D323A;
+}
+
+.text-gain {
+    color: var(--accent-green);
+}
+
+.text-loss {
+    color: var(--accent-red);
+}
+
+/* Form Elements */
+.form-group {
+    margin-bottom: 1.2rem;
+}
+
+    .form-group label {
+        display: block;
+        margin-bottom: 0.5rem;
+        color: var(--text-muted);
+    }
+
+.form-control {
+    width: 100%;
+    padding: 10px;
+    background: #2A2E35;
+    border: 1px solid #3F444E;
+    color: white;
+    border-radius: 8px;
+}
+
+.btn-primary {
+    background-color: var(--accent-blue);
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+}
