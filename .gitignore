@@ -361,3 +361,11 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+# --- Finance Tracker Specifics ---
+# Ignore the actual database files containing your private records
+FinanceData.db
+FinanceData.db-shm
+FinanceData.db-wal
+
+# Ignore any temporary local test databases
+*.db
