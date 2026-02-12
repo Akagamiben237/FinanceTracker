@@ -1,21 +1,32 @@
-﻿<!DOCTYPE html>
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
-    <link rel="stylesheet" href="/css/site.css" asp-append-version="true" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - FinanceTracker</title>
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
     <div class="sidebar">
-        <h2>FinanceTracker</h2>
-        <nav>
-            <li><a href="/Home/">Dashboard</a></li>
-            <li><a href="/Home/Records">View All History</a></li>           
-          <li>  <a asp-action="ExportToCSV" color: white;">Download Records</a>
-            </li>
-            </a>
-        </nav>
+        <h2><i class="fa-solid fa-wallet"></i> FinanceTracker</h2>
+        <ul class="nav-links">
+            <li><a href="/Home/" class="@(ViewContext.RouteData.Values["Action"]?.ToString() == "Index" && ViewContext.RouteData.Values["Controller"]?.ToString() == "Home" ? "active" : "")"><i class="fa-solid fa-chart-line"></i> Dashboard</a></li>
+            <li><a href="/Home/Records" class="@(ViewContext.RouteData.Values["Action"]?.ToString() == "Records" ? "active" : "")"><i class="fa-solid fa-list"></i> History</a></li>
+            <li><a href="/Home/Create" class="@(ViewContext.RouteData.Values["Action"]?.ToString() == "Create" && ViewContext.RouteData.Values["Controller"]?.ToString() == "Home" ? "active" : "")"><i class="fa-solid fa-plus-circle"></i> Add New</a></li>
+            <li><a href="/Todos" class="@(ViewContext.RouteData.Values["Controller"]?.ToString() == "Todos" ? "active" : "")"><i class="fa-solid fa-list-check"></i> Todo List</a></li>
+            <li><a asp-action="ExportToCSV"><i class="fa-solid fa-file-csv"></i> Export Data</a></li>
+            <li><a href="/Home/Settings" class="@(ViewContext.RouteData.Values["Action"]?.ToString() == "Settings" ? "active" : "")"><i class="fa-solid fa-gear"></i> Settings</a></li>
+            <li><a href="/Categories" class="@(ViewContext.RouteData.Values["Controller"]?.ToString() == "Categories" ? "active" : "")"><i class="fa-solid fa-tags"></i> Categories</a></li>
+        </ul>
     </div>
 
     @RenderBody()
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

@@ -1,0 +1,39 @@
+@model FinanceTracker.Models.Category
+
+@{
+    ViewData["Title"] = "Add Category";
+}
+
+<div class="main-content">
+    <header>
+        <h1>Add Category</h1>
+        <p class="text-muted">Create a new category for your transactions.</p>
+    </header>
+
+    <div class="finance-card" style="max-width: 600px;">
+        <form asp-action="Create" method="post">
+            <div class="form-group" style="margin-bottom: 1.5rem;">
+                <label>Name</label>
+                <input asp-for="Name" class="form-control" placeholder="e.g., Gaming, Travel" autofocus required />
+            </div>
+
+            <div class="form-group" style="margin-bottom: 1.5rem;">
+                <label>Type</label>
+                <select asp-for="Type" class="form-control">
+                    <option value="Loss">Expense (Loss)</option>
+                    <option value="Gain">Income (Gain)</option>
+                </select>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 1.5rem;">
+                <label>Icon (Emoji)</label>
+                <input asp-for="Icon" class="form-control" placeholder="e.g., 🎮, ✈️" value="📦" />
+            </div>
+
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button type="submit" class="btn-primary" style="flex: 1;">Save Category</button>
+                <a href="/Categories" class="btn-secondary" style="flex: 1; text-align: center; background: rgba(255,255,255,0.1); color: white; padding: 12px; border-radius: 8px; text-decoration: none;">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>

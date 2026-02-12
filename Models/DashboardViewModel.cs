@@ -18,6 +18,7 @@
         public Dictionary<string, decimal> SpendingData { get; set; } = [];
         public Dictionary<string, decimal> GainsData { get; set; } = [];
         public List<Transaction> RecentTransactions { get; set; } = [];
+        public Dictionary<string, decimal> SpendingHistory { get; set; } = [];
 
         // Data for the Donut Chart
         public SpendingSummary Spending { get; set; } = new SpendingSummary();

@@ -1,0 +1,136 @@
+@model List<FinanceTracker.Models.TodoItem>
+
+@{
+    ViewData["Title"] = "Todo List";
+}
+
+<div class="main-content">
+    <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+        <div>
+            <h1>Todo List</h1>
+            <p class="text-muted">Manage your tasks and financial reminders.</p>
+        </div>
+        <a href="/Todos/Create" class="btn-primary"><i class="fa-solid fa-plus"></i> Add Task</a>
+    </header>
+
+    <div class="finance-card" style="margin-bottom: 1.5rem;">
+        <form asp-action="QuickAdd" method="post" style="display: flex; gap: 10px; align-items: center;">
+            <input type="text" name="title" class="form-control" placeholder="Quick add a task..." style="flex: 3;" required />
+            <select name="priority" class="form-control" style="flex: 1;">
+                <option value="Low">Low</option>
+                <option value="Medium" selected>Medium</option>
+                <option value="High">High</option>
+            </select>
+            <input type="date" name="dueDate" class="form-control" style="flex: 1;" />
+            <button type="submit" class="btn-primary"><i class="fa-solid fa-plus"></i></button>
+        </form>
+    </div>
+
+    <div class="finance-card" style="margin-bottom: 1.5rem; padding: 0.75rem 1.5rem;">
+        <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+            <a href="/Todos?filter=all" class="filter-tab @(ViewBag.CurrentFilter == "all" ? "active" : "")" style="text-decoration: none; padding: 8px 16px; border-radius: 8px; color: var(--text-muted); transition: all 0.2s;">
+                <i class="fa-solid fa-list"></i> All <span style="background: rgba(255,255,255,0.1); padding: 2px 8px; border-radius: 12px; font-size: 0.8rem; margin-left: 4px;">@ViewBag.TotalCount</span>
+            </a>
+            <a href="/Todos?filter=active" class="filter-tab @(ViewBag.CurrentFilter == "active" ? "active" : "")" style="text-decoration: none; padding: 8px 16px; border-radius: 8px; color: var(--text-muted); transition: all 0.2s;">
+                <i class="fa-regular fa-circle"></i> Active <span style="background: rgba(255,255,255,0.1); padding: 2px 8px; border-radius: 12px; font-size: 0.8rem; margin-left: 4px;">@ViewBag.ActiveCount</span>
+            </a>
+            <a href="/Todos?filter=completed" class="filter-tab @(ViewBag.CurrentFilter == "completed" ? "active" : "")" style="text-decoration: none; padding: 8px 16px; border-radius: 8px; color: var(--text-muted); transition: all 0.2s;">
+                <i class="fa-solid fa-circle-check"></i> Completed <span style="background: rgba(255,255,255,0.1); padding: 2px 8px; border-radius: 12px; font-size: 0.8rem; margin-left: 4px;">@ViewBag.CompletedCount</span>
+            </a>
+            <a href="/Todos?filter=financial" class="filter-tab @(ViewBag.CurrentFilter == "financial" ? "active" : "")" style="text-decoration: none; padding: 8px 16px; border-radius: 8px; color: var(--text-muted); transition: all 0.2s;">
+                <i class="fa-solid fa-dollar-sign"></i> Financial <span style="background: rgba(255,255,255,0.1); padding: 2px 8px; border-radius: 12px; font-size: 0.8rem; margin-left: 4px;">@ViewBag.FinancialCount</span>
+            </a>
+        </div>
+    </div>
+
+    <div class="finance-card">
+        @if (Model != null && Model.Any())
+        {
+            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                @foreach (var item in Model)
+                {
+                    var isOverdue = !item.IsCompleted && item.DueDate.HasValue && item.DueDate < DateTime.Today;
+                    var priorityColor = item.Priority switch
+                    {
+                        "High" => "var(--accent-danger)",
+                        "Low" => "var(--accent-success)",
+                        _ => "var(--accent-warning)"
+                    };
+
+                    <div class="todo-item" style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; border-radius: 12px; background: rgba(255,255,255,0.03); border-left: 3px solid @priorityColor; @(item.IsCompleted ? "opacity: 0.6;" : "")">
+                        <div style="display: flex; align-items: center; gap: 1rem; flex: 1;">
+                            <a href="/Todos/ToggleComplete/@item.Id" style="text-decoration: none; font-size: 1.2rem; color: @(item.IsCompleted ? "var(--accent-success)" : "var(--text-muted)");">
+                                @if (item.IsCompleted)
+                                {
+                                    <i class="fa-solid fa-circle-check"></i>
+                                }
+                                else
+                                {
+                                    <i class="fa-regular fa-circle"></i>
+                                }
+                            </a>
+                            <div style="flex: 1;">
+                                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                                    <strong style="font-size: 1rem; @(item.IsCompleted ? "text-decoration: line-through; color: var(--text-muted);" : "")">@item.Title</strong>
+                                    <span style="background: @priorityColor; color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 600;">@item.Priority</span>
+                                    @if (item.IsFinancial)
+                                    {
+                                        <span style="background: var(--accent-primary); color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem;">
+                                            <i class="fa-solid fa-dollar-sign"></i> @(item.Amount?.ToString("N2") ?? "0.00")
+                                        </span>
+                                    }
+                                </div>
+                                <div style="display: flex; gap: 1rem; margin-top: 4px; color: var(--text-muted); font-size: 0.85rem;">
+                                    @if (!string.IsNullOrEmpty(item.Description))
+                                    {
+                                        <span>@item.Description</span>
+                                    }
+                                    @if (item.DueDate.HasValue)
+                                    {
+                                        <span style="@(isOverdue ? "color: var(--accent-danger); font-weight: 600;" : "")">
+                                            <i class="fa-regular fa-calendar"></i> @item.DueDate.Value.ToString("MMM dd, yyyy")
+                                            @if (isOverdue)
+                                            {
+                                                <span>(Overdue)</span>
+                                            }
+                                        </span>
+                                    }
+                                    @if (item.IsFinancial && !string.IsNullOrEmpty(item.Category))
+                                    {
+                                        <span><i class="fa-solid fa-tag"></i> @item.Category</span>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 8px;">
+                            <a href="/Todos/Edit/@item.Id" style="color: var(--accent-primary); text-decoration: none; padding: 6px 12px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.85rem;">
+                                <i class="fa-solid fa-pen"></i>
+                            </a>
+                            <a href="/Todos/Delete/@item.Id" style="color: var(--accent-danger); text-decoration: none; padding: 6px 12px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.85rem;" onclick="return confirm('Delete this task?')">
+                                <i class="fa-solid fa-trash"></i>
+                            </a>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <div style="text-align: center; padding: 3rem 0; color: var(--text-muted);">
+                <i class="fa-solid fa-clipboard-list" style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.5;"></i>
+                <p style="font-size: 1.1rem;">No tasks found.</p>
+                <p style="font-size: 0.9rem;">Add a task above to get started!</p>
+            </div>
+        }
+    </div>
+</div>
+
+<style>
+    .filter-tab:hover, .filter-tab.active {
+        background: rgba(99, 102, 241, 0.1);
+        color: var(--accent-primary) !important;
+    }
+    .todo-item:hover {
+        background: rgba(255,255,255,0.05) !important;
+    }
+</style>

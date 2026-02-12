@@ -1,4 +1,4 @@
-﻿@model FinanceTracker.Models.Transaction
+@model FinanceTracker.Models.Transaction
 
 @{
     // Helper to cast the ViewBag list once for the whole page
@@ -40,24 +40,13 @@
                 <div class="form-group">
                     <label>Category</label>
                     <select asp-for="Category" id="categorySelect" class="form-control">
-                        @* Expenses *@
-                        <option value="Food" data-type="Loss">🍕 Food / Dining</option>
-                        <option value="Fuel" data-type="Loss">⛽ Fuel / Transport</option>
-                        <option value="Grocery" data-type="Loss">🛒 Grocery</option>
-                        <option value="Rent" data-type="Loss">🏠 Rent / Housing</option>
-                        <option value="Medical" data-type="Loss">🏥 Health / Medical</option>
-
-                        @* Income *@
-                        <option value="Salary" data-type="Gain">💰 Salary</option>
-                        <option value="Business" data-type="Gain">🏢 Business Income</option>
-                        <option value="Freelance" data-type="Gain">🧑‍💻 Freelance / Side Hustle</option>
-                        <option value="Stocks" data-type="Gain">📈 Stocks / Trading</option>
-                        <option value="Dividends" data-type="Gain">💹 Dividends</option>
-                        <option value="Crypto" data-type="Gain">🪙 Crypto</option>
-                        <option value="Interest" data-type="Gain">🏦 Interest</option>
-                        <option value="RentalIncome" data-type="Gain">🏘️ Rental Income</option>
-
-                        <option value="Other" data-type="both">📦 Other</option>
+                        @if (ViewBag.Categories != null)
+                        {
+                            foreach (var cat in ViewBag.Categories)
+                            {
+                                <option value="@cat.Name" data-type="@cat.Type">@cat.Icon @cat.Name</option>
+                            }
+                        }
                     </select>
                 </div>
                 <div class="form-group">
@@ -94,7 +83,7 @@
             <div class="transaction-list">
                 @foreach (var item in transactionList)
                 {
-                    <div class="transaction-row" style="display:flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid #2D323A;">
+                    <div class="transaction-row" style="display:flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid var(--border-color);">
                         <div>
                             <strong style="font-size: 1.05rem;">@item.Title</strong><br />
                             <small style="color: var(--text-muted);">
@@ -103,17 +92,17 @@
                         </div>
 
                         <div style="display: flex; align-items: center; gap: 10px;">
-                            <div style="font-weight: bold; font-size: 1.1rem; color: @(item.Type == "Gain" ? "var(--accent-green)" : "var(--accent-red)")">
+                            <div style="font-weight: bold; font-size: 1.1rem; color: @(item.Type == "Gain" ? "var(--accent-success)" : "var(--accent-danger)")">
                                 @(item.Type == "Gain" ? "+" : "-")@item.Amount.ToString("N2")
                             </div>
 
                             <a href="/Home/Edit/@item.Id"
-                               style="color: var(--accent-blue); text-decoration: none; font-size: 0.9rem; border: 1px solid #3F444E; padding: 4px 12px; border-radius: 4px;">
+                               style="color: var(--accent-primary); text-decoration: none; font-size: 0.9rem; border: 1px solid var(--border-color); padding: 4px 12px; border-radius: 4px;">
                                 Edit
                             </a>
 
                             <a href="/Home/Delete/@item.Id?returnUrl=/Home/Create?date=@ViewBag.SelectedDate"
-                               style="color: var(--accent-red); text-decoration: none; font-size: 0.9rem; border: 1px solid #3F444E; padding: 4px 12px; border-radius: 4px;"
+                               style="color: var(--accent-danger); text-decoration: none; font-size: 0.9rem; border: 1px solid var(--border-color); padding: 4px 12px; border-radius: 4px;"
                                onclick="return confirm('Delete this record?')">
                                 Delete
                             </a>

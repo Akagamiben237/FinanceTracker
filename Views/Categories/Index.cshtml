@@ -1,0 +1,50 @@
+@model List<FinanceTracker.Models.Category>
+
+@{
+    ViewData["Title"] = "Categories";
+}
+
+<div class="main-content">
+    <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+        <div>
+            <h1>Categories</h1>
+            <p class="text-muted">Manage your income and expense categories.</p>
+        </div>
+        <a href="/Categories/Create" class="btn-primary"><i class="fa-solid fa-plus"></i> Add New</a>
+    </header>
+
+    <div class="finance-card">
+        @if (Model != null && Model.Any())
+        {
+            <div class="transaction-list">
+                @foreach (var item in Model)
+                {
+                    <div class="transaction-row" style="display:flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                        <div style="display: flex; align-items: center; gap: 15px;">
+                            <span style="font-size: 1.5rem;">@item.Icon</span>
+                            <div>
+                                <strong style="font-size: 1.05rem;">@item.Name</strong><br />
+                                <span class="badge @(item.Type == "Gain" ? "bg-success" : "bg-danger")" style="font-size: 0.75rem; padding: 4px 8px; border-radius: 4px; color: white;">
+                                    @item.Type
+                                </span>
+                            </div>
+                        </div>
+
+                        <a href="/Categories/Delete/@item.Id" 
+                           style="color: var(--accent-red); text-decoration: none; border: 1px solid rgba(255,255,255,0.1); padding: 6px 12px; border-radius: 4px;"
+                           onclick="return confirm('Delete this category?')">
+                            <i class="fa-solid fa-trash"></i>
+                        </a>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <div style="text-align: center; padding: 3rem 0; color: var(--text-muted);">
+                <i class="fa-solid fa-tags" style="font-size: 2rem; margin-bottom: 1rem; opacity: 0.5;"></i>
+                <p>No categories found. Add one to get started!</p>
+            </div>
+        }
+    </div>
+</div>

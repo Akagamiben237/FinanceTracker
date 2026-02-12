@@ -1,4 +1,4 @@
-﻿@model List<FinanceTracker.Models.Transaction>
+@model List<FinanceTracker.Models.Transaction>
 
 @functions {
     public string GetIcon(string category)
@@ -89,13 +89,13 @@
                             <td><strong>@GetIcon(item.Category) @item.Title</strong></td>
                             <td>@item.Category</td>
                             <td>@item.Source</td>
-                            <td style="font-weight:bold; color: @(item.Type == "Gain" ? "var(--accent-green)" : "var(--accent-red)")">
+                            <td style="font-weight:bold; color: @(item.Type == "Gain" ? "var(--accent-success)" : "var(--accent-danger)")">
                                 @(item.Type == "Gain" ? "+" : "-") @item.Amount.ToString("N2")
                             </td>
                             <td>
-                                <a href="/Home/Edit/@item.Id" style="color: var(--accent-blue); margin-right: 10px; text-decoration: none;">Edit</a>
+                                <a href="/Home/Edit/@item.Id" style="color: var(--accent-primary); margin-right: 10px; text-decoration: none;">Edit</a>
                                 <a href="/Home/Delete/@item.Id?returnUrl=/Home/Records"
-                                   style="color: var(--accent-red); text-decoration: none;"
+                                   style="color: var(--accent-danger); text-decoration: none;"
                                    onclick="return confirm('Delete this record?')">Delete</a>
                             </td>
                         </tr>

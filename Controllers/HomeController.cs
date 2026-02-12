@@ -37,7 +37,12 @@ namespace FinanceTracker.Controllers
             };
 
             // 3b. NEW: Monthly Budgeting Logic
-            decimal monthlyGoal = 10000; // Set your limit here
+            // 3b. NEW: Monthly Budgeting Logic
+            // Fetch from DB or use default 10000
+            var budgetSetting = _context.ApplicationSettings?.FirstOrDefault(s => s.Key == "MonthlyBudget");
+            decimal monthlyGoal = budgetSetting != null && decimal.TryParse(budgetSetting.Value, out decimal val) 
+                                  ? val 
+                                  : 10000;
             decimal thisMonthSpend = (decimal)allData
                 .Where(t => t.Type == "Loss" && t.TransactionDate.Month == DateTime.Now.Month && t.TransactionDate.Year == DateTime.Now.Year)
                 .Sum(t => t.Amount);
@@ -59,6 +64,14 @@ namespace FinanceTracker.Controllers
                 .GroupBy(t => t.Category ?? "Other")
                 .ToDictionary(g => g.Key, g => (decimal)g.Sum(t => t.Amount));
 
+            // 6. Spending History for Line Chart
+            // Group by Date + "Value"
+            var spendingHistory = allData
+                .Where(t => t.Type == "Loss" && t.TransactionDate >= cutoffDate)
+                .GroupBy(t => t.TransactionDate.ToString("MMM dd"))
+                .ToDictionary(g => g.Key, g => (decimal)g.Sum(t => t.Amount));
+
+
             // 6. Get the last recorded date for the Stack view
             var lastDateRecord = allData.OrderByDescending(t => t.TransactionDate).FirstOrDefault();
             DateTime lastDate = lastDateRecord?.TransactionDate ?? DateTime.Today;
@@ -73,6 +86,7 @@ namespace FinanceTracker.Controllers
                                             .OrderByDescending(t => t.Id).ToList(),
                 SpendingData = spendingByCategory,
                 GainsData = gainsByCategory,
+                SpendingHistory = spendingHistory,
                 TotalChange = timeframe,
                 CashChange = "Live",
                 BankChange = "Live"
@@ -85,6 +99,26 @@ namespace FinanceTracker.Controllers
         [HttpGet]
         public IActionResult Create(string date)
         {
+            // 0. Seed Categories if empty
+            if (!_context.Categories.Any())
+            {
+                var defaults = new List<Category>
+                {
+                    new Category { Name = "Food", Type = "Loss", Icon = "🍕" },
+                    new Category { Name = "Fuel", Type = "Loss", Icon = "⛽" },
+                    new Category { Name = "Grocery", Type = "Loss", Icon = "🛒" },
+                    new Category { Name = "Rent", Type = "Loss", Icon = "🏠" },
+                    new Category { Name = "Medical", Type = "Loss", Icon = "🏥" },
+                    new Category { Name = "Salary", Type = "Gain", Icon = "💰" },
+                    new Category { Name = "Business", Type = "Gain", Icon = "🏢" },
+                    new Category { Name = "Freelance", Type = "Gain", Icon = "🧑‍💻" },
+                    new Category { Name = "Stocks", Type = "Gain", Icon = "📈" },
+                    new Category { Name = "Other", Type = "Loss", Icon = "📦" }
+                };
+                _context.Categories.AddRange(defaults);
+                _context.SaveChanges();
+            }
+
             // 1. Determine the working date
             DateTime workingDate = string.IsNullOrEmpty(date) ? DateTime.Today : DateTime.Parse(date);
 
@@ -115,9 +149,17 @@ namespace FinanceTracker.Controllers
             // 4. Set ViewBags for the View to use
             ViewBag.RecentTransactions = dayEntries;
             ViewBag.SelectedDate = workingDate.ToString("yyyy-MM-dd");
+            ViewBag.Categories = _context.Categories.OrderBy(c => c.Name).ToList();
 
             // Return a SINGLE transaction model for the form
-            return View(new Transaction { TransactionDate = workingDate });
+            return View(new Transaction 
+            { 
+                TransactionDate = workingDate,
+                Title = string.Empty,
+                Category = string.Empty,
+                Type = string.Empty,
+                Source = string.Empty
+            });
         }
 
         [HttpPost]
@@ -140,6 +182,7 @@ namespace FinanceTracker.Controllers
 
             ViewBag.RecentTransactions = dayEntries;
             ViewBag.SelectedDate = transaction.TransactionDate.ToString("yyyy-MM-dd");
+            ViewBag.Categories = _context.Categories.OrderBy(c => c.Name).ToList();
             return View(transaction);
         }
 
@@ -175,7 +218,7 @@ namespace FinanceTracker.Controllers
         }
 
         // GET: Delete and return to the entry date
-        public IActionResult Delete(int id, string returnUrl = null)
+        public IActionResult Delete(int id, string? returnUrl = null)
         {
             var transaction = _context.Transactions.Find(id);
             if (transaction != null)
@@ -254,6 +297,33 @@ namespace FinanceTracker.Controllers
             }
 
             return File(System.Text.Encoding.UTF8.GetBytes(builder.ToString()), "text/csv", "FinanceReport.csv");
+        }
+        public IActionResult Settings()
+        {
+            var budgetSetting = _context.ApplicationSettings?.FirstOrDefault(s => s.Key == "MonthlyBudget");
+            ViewBag.MonthlyBudget = budgetSetting?.Value ?? "10000";
+            return View();
+        }
+
+        [HttpPost]
+        public IActionResult UpdateSettings(string monthlyBudget)
+        {
+            if (decimal.TryParse(monthlyBudget, out decimal parsedBudget))
+            {
+                var setting = _context.ApplicationSettings?.FirstOrDefault(s => s.Key == "MonthlyBudget");
+                if (setting == null)
+                {
+                    setting = new ApplicationSetting { Key = "MonthlyBudget", Value = parsedBudget.ToString() };
+                    _context.ApplicationSettings?.Add(setting);
+                }
+                else
+                {
+                    setting.Value = parsedBudget.ToString();
+                    _context.ApplicationSettings?.Update(setting);
+                }
+                _context.SaveChanges();
+            }
+            return RedirectToAction("Settings");
         }
     }
 }

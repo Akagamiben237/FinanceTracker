@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
 
 namespace FinanceTracker.Models
@@ -11,5 +11,8 @@ namespace FinanceTracker.Models
         // These represent your tables in the database
         public DbSet<Transaction> Transactions { get; set; }
         public DbSet<SpendingSummary> SpendingSummaries { get; set; }
+        public DbSet<ApplicationSetting> ApplicationSettings { get; set; }
+        public DbSet<Category> Categories { get; set; }
+        public DbSet<TodoItem> TodoItems { get; set; }
     }
 }
