@@ -6,7 +6,21 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using FinanceTracker.Models;
-using Microsoft.Extensions.Hosting; 
+using Microsoft.Extensions.Hosting;
+using System.Threading;
+
+// Create a unique name for your app lock
+using Mutex mutex = new Mutex(true, "FinanceTracker_Unique_Key", out bool isNewInstance);
+
+if (!isNewInstance)
+{
+    // Another instance is already running! 
+    // We can't easily get its port here, so we will stick to a FIXED port
+    // for this strategy to work perfectly.
+    Process.Start(new ProcessStartInfo { FileName = "http://127.0.0.1:5000", UseShellExecute = true });
+    return; // Close this second .exe immediately
+}
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -14,8 +28,8 @@ var builder = WebApplication.CreateBuilder(args);
 // CHANGE THIS:
 builder.WebHost.ConfigureKestrel(options =>
 {
-    // Use 127.0.0.1 instead of localhost for dynamic port 0
-    options.Listen(System.Net.IPAddress.Loopback, 0);
+    // Use port 5000 consistently so the "Single Instance" logic knows where to go
+    options.Listen(System.Net.IPAddress.Loopback, 5000); 
 });
 var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
 var appFolder = Path.Combine(localAppData, "FinanceTracker");
