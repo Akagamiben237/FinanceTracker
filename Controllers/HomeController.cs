@@ -1,6 +1,12 @@
 using Microsoft.AspNetCore.Mvc;
 using FinanceTracker.Models;
 using System.Linq;
+using System.Globalization; // Added for CSV Culture
+using System.IO;            // Added for StreamReader
+using CsvHelper;            // Ensure you have CsvHelper NuGet package installed
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace FinanceTracker.Controllers
 {
@@ -15,10 +21,9 @@ namespace FinanceTracker.Controllers
 
         public IActionResult Index(string timeframe = "monthly")
         {
-            // 1. Get all data from the database
+            // ... (Your existing Index logic kept exactly the same)
             var allData = _context.Transactions?.ToList() ?? [];
 
-            // 2. Define balance variables with explicit (decimal) casts
             decimal totalGain = (decimal)allData.Where(t => t.Type == "Gain").Sum(t => t.Amount);
             decimal totalLoss = (decimal)allData.Where(t => t.Type == "Loss").Sum(t => t.Amount);
 
@@ -28,7 +33,6 @@ namespace FinanceTracker.Controllers
             decimal bankGain = (decimal)allData.Where(t => t.Source == "Bank" && t.Type == "Gain").Sum(t => t.Amount);
             decimal bankLoss = (decimal)allData.Where(t => t.Source == "Bank" && t.Type == "Loss").Sum(t => t.Amount);
 
-            // 3. Timeframe Logic
             DateTime cutoffDate = timeframe switch
             {
                 "daily" => DateTime.Today,
@@ -36,47 +40,36 @@ namespace FinanceTracker.Controllers
                 _ => DateTime.Today.AddDays(-30)
             };
 
-            // 3b. NEW: Monthly Budgeting Logic
-            // 3b. NEW: Monthly Budgeting Logic
-            // Fetch from DB or use default 10000
             var budgetSetting = _context.ApplicationSettings?.FirstOrDefault(s => s.Key == "MonthlyBudget");
-            decimal monthlyGoal = budgetSetting != null && decimal.TryParse(budgetSetting.Value, out decimal val) 
-                                  ? val 
+            decimal monthlyGoal = budgetSetting != null && decimal.TryParse(budgetSetting.Value, out decimal val)
+                                  ? val
                                   : 10000;
             decimal thisMonthSpend = (decimal)allData
                 .Where(t => t.Type == "Loss" && t.TransactionDate.Month == DateTime.Now.Month && t.TransactionDate.Year == DateTime.Now.Year)
                 .Sum(t => t.Amount);
 
-            // Calculate percentage (capped at 100 for the bar)
             ViewBag.BudgetPercent = Math.Min((thisMonthSpend / monthlyGoal) * 100, 100);
             ViewBag.MonthlyGoal = monthlyGoal;
             ViewBag.ThisMonthSpend = thisMonthSpend;
 
-            // 4. Spending Analysis Data (Losses)
             var spendingByCategory = allData
                 .Where(t => t.Type == "Loss" && t.TransactionDate >= cutoffDate)
                 .GroupBy(t => t.Category ?? "Other")
                 .ToDictionary(g => g.Key, g => (decimal)g.Sum(t => t.Amount));
 
-            // 5. Gains Analysis Data (Incomes)
             var gainsByCategory = allData
                 .Where(t => t.Type == "Gain" && t.TransactionDate >= cutoffDate)
                 .GroupBy(t => t.Category ?? "Other")
                 .ToDictionary(g => g.Key, g => (decimal)g.Sum(t => t.Amount));
 
-            // 6. Spending History for Line Chart
-            // Group by Date + "Value"
             var spendingHistory = allData
                 .Where(t => t.Type == "Loss" && t.TransactionDate >= cutoffDate)
                 .GroupBy(t => t.TransactionDate.ToString("MMM dd"))
                 .ToDictionary(g => g.Key, g => (decimal)g.Sum(t => t.Amount));
 
-
-            // 6. Get the last recorded date for the Stack view
             var lastDateRecord = allData.OrderByDescending(t => t.TransactionDate).FirstOrDefault();
             DateTime lastDate = lastDateRecord?.TransactionDate ?? DateTime.Today;
 
-            // 7. Build the ViewModel
             var viewModel = new DashboardViewModel
             {
                 TotalBalance = totalGain - totalLoss,
@@ -94,12 +87,10 @@ namespace FinanceTracker.Controllers
 
             return View(viewModel);
         }
-        // GET: Day Entry Mode
-        // GET: Shows the page
+
         [HttpGet]
         public IActionResult Create(string date)
         {
-            // 0. Seed Categories if empty
             if (!_context.Categories.Any())
             {
                 var defaults = new List<Category>
@@ -119,16 +110,12 @@ namespace FinanceTracker.Controllers
                 _context.SaveChanges();
             }
 
-            // 1. Determine the working date
             DateTime workingDate = string.IsNullOrEmpty(date) ? DateTime.Today : DateTime.Parse(date);
-
-            // 2. Fetch records for the selected date
             var dayEntries = _context.Transactions
                 .Where(t => t.TransactionDate.Date == workingDate.Date)
                 .OrderByDescending(t => t.Id)
                 .ToList();
 
-            // 3. IF EMPTY: Find the last date that actually has data
             if (!dayEntries.Any())
             {
                 var lastEntry = _context.Transactions
@@ -146,14 +133,12 @@ namespace FinanceTracker.Controllers
                 }
             }
 
-            // 4. Set ViewBags for the View to use
             ViewBag.RecentTransactions = dayEntries;
             ViewBag.SelectedDate = workingDate.ToString("yyyy-MM-dd");
             ViewBag.Categories = _context.Categories.OrderBy(c => c.Name).ToList();
 
-            // Return a SINGLE transaction model for the form
-            return View(new Transaction 
-            { 
+            return View(new Transaction
+            {
                 TransactionDate = workingDate,
                 Title = string.Empty,
                 Category = string.Empty,
@@ -174,7 +159,6 @@ namespace FinanceTracker.Controllers
                 return RedirectToAction("Create", new { date = transaction.TransactionDate.ToString("yyyy-MM-dd") });
             }
 
-            // If validation fails, we MUST refill the list so the page doesn't crash
             var dayEntries = _context.Transactions
                 .Where(t => t.TransactionDate.Date == transaction.TransactionDate.Date)
                 .OrderByDescending(t => t.Id)
@@ -186,7 +170,6 @@ namespace FinanceTracker.Controllers
             return View(transaction);
         }
 
-        // GET: Edit Page
         public IActionResult Edit(int id)
         {
             var transaction = _context.Transactions.Find(id);
@@ -194,11 +177,9 @@ namespace FinanceTracker.Controllers
             return View(transaction);
         }
 
-        // POST: Update and return to the entry date
         [HttpPost]
         public IActionResult Edit(Transaction transaction, string returnUrl)
         {
-            // 1. Keep the number positive
             transaction.Amount = Math.Abs(transaction.Amount);
 
             if (ModelState.IsValid)
@@ -206,7 +187,6 @@ namespace FinanceTracker.Controllers
                 _context.Transactions.Update(transaction);
                 _context.SaveChanges();
 
-                // 2. REDIRECT: Go back to exactly where you came from
                 if (!string.IsNullOrEmpty(returnUrl))
                 {
                     return Redirect(returnUrl);
@@ -217,7 +197,6 @@ namespace FinanceTracker.Controllers
             return View(transaction);
         }
 
-        // GET: Delete and return to the entry date
         public IActionResult Delete(int id, string? returnUrl = null)
         {
             var transaction = _context.Transactions.Find(id);
@@ -227,8 +206,6 @@ namespace FinanceTracker.Controllers
                 _context.Transactions.Remove(transaction);
                 _context.SaveChanges();
 
-                // If we specified a returnUrl (like /Home/Records), go there. 
-                // Otherwise, go back to the Daily Entry (Create) page.
                 if (!string.IsNullOrEmpty(returnUrl))
                 {
                     return Redirect(returnUrl);
@@ -242,10 +219,9 @@ namespace FinanceTracker.Controllers
         {
             var query = _context.Transactions.AsQueryable();
 
-            // 1. Bulletproof Search (Title, Category, Source)
             if (!string.IsNullOrEmpty(search))
             {
-                string s = search.Trim().ToLower(); // Remove extra spaces and lowercase
+                string s = search.Trim().ToLower();
                 query = query.Where(t =>
                     (t.Title != null && t.Title.ToLower().Contains(s)) ||
                     (t.Category != null && t.Category.ToLower().Contains(s)) ||
@@ -253,29 +229,24 @@ namespace FinanceTracker.Controllers
                 );
             }
 
-            // 2. Bulletproof Category Filter
             if (!string.IsNullOrEmpty(category))
             {
                 string c = category.Trim().ToLower();
-                // Use Contains instead of == to catch partial matches or records with extra spaces
                 query = query.Where(t => t.Category != null && t.Category.ToLower().Contains(c));
             }
 
-            // 3. Exact Filters (Type and Source are usually clean, but let's be safe)
             if (!string.IsNullOrEmpty(type))
                 query = query.Where(t => t.Type.ToLower() == type.ToLower());
 
             if (!string.IsNullOrEmpty(source))
                 query = query.Where(t => t.Source.ToLower() == source.ToLower());
 
-            // 4. Date & Month logic remains the same...
             if (!string.IsNullOrEmpty(date) && DateTime.TryParse(date, out DateTime filterDate))
                 query = query.Where(t => t.TransactionDate.Date == filterDate.Date);
 
             if (month.HasValue && month > 0)
                 query = query.Where(t => t.TransactionDate.Month == month.Value);
 
-            // Persist state
             ViewBag.CurrentSearch = search;
             ViewBag.CurrentType = type;
             ViewBag.CurrentCategory = category;
@@ -285,6 +256,7 @@ namespace FinanceTracker.Controllers
 
             return View(query.OrderByDescending(t => t.TransactionDate).ToList());
         }
+
         public IActionResult ExportToCSV()
         {
             var builder = new System.Text.StringBuilder();
@@ -293,11 +265,69 @@ namespace FinanceTracker.Controllers
             var data = _context.Transactions.ToList();
             foreach (var item in data)
             {
+                // Ensures date is yyyy-MM-dd for clean re-import
                 builder.AppendLine($"{item.TransactionDate:yyyy-MM-dd},{item.Title},{item.Amount},{item.Type},{item.Source},{item.Category}");
             }
 
             return File(System.Text.Encoding.UTF8.GetBytes(builder.ToString()), "text/csv", "FinanceReport.csv");
         }
+
+        [HttpPost]
+        public async Task<IActionResult> ImportCSV(IFormFile file)
+        {
+            if (file == null || file.Length == 0) return BadRequest("Please select a file.");
+
+            try
+            {
+                using (var reader = new StreamReader(file.OpenReadStream()))
+                using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
+                {
+                    var records = csv.GetRecords<dynamic>().ToList();
+
+                    // Fetch existing data once to compare and speed up the process
+                    var existingTransactions = _context.Transactions.ToList();
+
+                    foreach (var row in records)
+                    {
+                        var dict = (IDictionary<string, object>)row;
+
+                        DateTime date = DateTime.Parse(dict["Date"].ToString());
+                        string title = dict["Title"].ToString();
+                        float amount = float.Parse(dict["Amount"].ToString(), CultureInfo.InvariantCulture);
+
+                        // DUPLICATE CHECK: See if this exact record already exists
+                        bool isDuplicate = existingTransactions.Any(t =>
+                            t.TransactionDate.Date == date.Date &&
+                            t.Title == title &&
+                            Math.Abs(t.Amount - amount) < 0.01 // Use a small margin for float comparison
+                        );
+
+                        if (!isDuplicate)
+                        {
+                            var transaction = new Transaction
+                            {
+                                TransactionDate = date,
+                                Title = title,
+                                Amount = amount,
+                                Type = dict["Type"].ToString(),
+                                Source = dict["Source"].ToString(),
+                                Category = dict["Category"].ToString()
+                            };
+
+                            _context.Transactions.Add(transaction);
+                        }
+                    }
+                    await _context.SaveChangesAsync();
+                }
+                return RedirectToAction("Records");
+            }
+            catch (Exception)
+            {
+                TempData["Error"] = "Import failed. Check CSV format.";
+                return RedirectToAction("Records");
+            }
+        }
+
         public IActionResult Settings()
         {
             var budgetSetting = _context.ApplicationSettings?.FirstOrDefault(s => s.Key == "MonthlyBudget");

@@ -16,7 +16,18 @@
             <li><a href="/Home/Records" class="@(ViewContext.RouteData.Values["Action"]?.ToString() == "Records" ? "active" : "")"><i class="fa-solid fa-list"></i> History</a></li>
             <li><a href="/Home/Create" class="@(ViewContext.RouteData.Values["Action"]?.ToString() == "Create" && ViewContext.RouteData.Values["Controller"]?.ToString() == "Home" ? "active" : "")"><i class="fa-solid fa-plus-circle"></i> Add New</a></li>
             <li><a href="/Todos" class="@(ViewContext.RouteData.Values["Controller"]?.ToString() == "Todos" ? "active" : "")"><i class="fa-solid fa-list-check"></i> Todo List</a></li>
-            <li><a asp-action="ExportToCSV"><i class="fa-solid fa-file-csv"></i> Export Data</a></li>
+
+            <li><a asp-controller="Home" asp-action="ExportToCSV"><i class="fa-solid fa-file-export"></i> Export Data</a></li>
+
+            <li>
+                <form id="importForm" asp-controller="Home" asp-action="ImportCSV" method="post" enctype="multipart/form-data" style="display:none;">
+                    <input type="file" name="file" id="importFile" accept=".csv" onchange="document.getElementById('importForm').submit();" />
+                </form>
+                <a href="javascript:void(0);" onclick="document.getElementById('importFile').click();">
+                    <i class="fa-solid fa-file-import"></i> Import Data
+                </a>
+            </li>
+
             <li><a href="/Home/Settings" class="@(ViewContext.RouteData.Values["Action"]?.ToString() == "Settings" ? "active" : "")"><i class="fa-solid fa-gear"></i> Settings</a></li>
             <li><a href="/Categories" class="@(ViewContext.RouteData.Values["Controller"]?.ToString() == "Categories" ? "active" : "")"><i class="fa-solid fa-tags"></i> Categories</a></li>
         </ul>
