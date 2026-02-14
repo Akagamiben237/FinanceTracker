@@ -14,7 +14,7 @@
         <div class="finance-card">
             <div class="card-label">Total Balance</div>
             <div class="balance-amount" style="color: @(Model.TotalBalance >= 0 ? "var(--accent-success)" : "var(--accent-danger)")">
-                @Model.TotalBalance.ToString("C")
+                ₹@Model.TotalBalance.ToString("N2")
             </div>
             <small style="color: var(--accent-primary)"><i class="fa-solid fa-clock"></i> @Model.TotalChange View</small>
         </div>
@@ -22,7 +22,7 @@
         <div class="finance-card">
             <div class="card-label">Cash on Hand</div>
             <div class="balance-amount" style="color: @(Model.CashBalance >= 0 ? "var(--accent-success)" : "var(--accent-danger)")">
-                @Model.CashBalance.ToString("C")
+                ₹@Model.CashBalance.ToString("N2")
             </div>
             <small class="text-muted"><i class="fa-regular fa-money-bill-1"></i> Live Update</small>
         </div>
@@ -30,17 +30,16 @@
         <div class="finance-card">
             <div class="card-label">Bank Account</div>
             <div class="balance-amount" style="color: @(Model.BankBalance >= 0 ? "var(--accent-success)" : "var(--accent-danger)")">
-                @Model.BankBalance.ToString("C")
+                ₹@Model.BankBalance.ToString("N2")
             </div>
             <small class="text-muted"><i class="fa-solid fa-building-columns"></i> Live Update</small>
         </div>
     </div>
 
-    <!-- Spending Trends Chart -->
     <div class="finance-card" style="margin-bottom: 2rem;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
             <h3 style="margin:0;">Spending Trends</h3>
-            <span class="text-muted">Past @Model.TotalChange period</span>
+            <span class="text-muted">Analysis: @Model.TotalChange</span>
         </div>
         <div style="height: 300px; width: 100%;">
             <canvas id="spendingTrendsChart"></canvas>
@@ -52,7 +51,7 @@
             <h3 style="margin: 0; font-size: 1.1rem;">Monthly Budget Goal</h3>
             <div style="display: flex; align-items: center; gap: 10px;">
                 <span style="color: var(--text-muted); font-size: 0.9rem;">
-                    @ViewBag.ThisMonthSpend.ToString("C0") / @ViewBag.MonthlyGoal.ToString("C0")
+                    ₹@ViewBag.ThisMonthSpend.ToString("N0") / ₹@ViewBag.MonthlyGoal.ToString("N0")
                 </span>
                 <a href="/Home/Settings" style="color: var(--accent-primary); font-size: 0.9rem;"><i class="fa-solid fa-pen-to-square"></i></a>
             </div>
@@ -76,12 +75,9 @@
     </div>
 
     <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 2rem;">
-        <!-- Recent Transactions -->
         <div class="finance-card">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-                <div>
-                    <h3 style="margin:0;">Recent Activity</h3>
-                </div>
+                <h3 style="margin:0;">Recent Activity</h3>
                 <a href="/Home/Create" class="btn-primary" style="text-decoration: none; font-size: 0.8em; padding: 8px 16px;">
                     <i class="fa-solid fa-plus"></i> Add New
                 </a>
@@ -95,8 +91,14 @@
                         <div class="transaction-row" style="display:flex; justify-content: space-between; padding: 12px; border-radius: 8px; background: rgba(255,255,255,0.03); align-items: center;">
                             <div style="display: flex; align-items: center; gap: 12px;">
                                 <div style="width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; color: var(--text-muted);">
-                                    @if(item.Type == "Gain") { <i class="fa-solid fa-arrow-trend-up text-success"></i> }
-                                    else { <i class="fa-solid fa-arrow-trend-down text-danger"></i> }
+                                    @if (item.Type == "Gain")
+                                    {
+                                        <i class="fa-solid fa-arrow-trend-up text-success"></i>
+                                    }
+                                    else
+                                    {
+                                        <i class="fa-solid fa-arrow-trend-down text-danger"></i>
+                                    }
                                 </div>
                                 <div>
                                     <strong style="font-size: 0.95rem;">@item.Title</strong><br />
@@ -104,29 +106,25 @@
                                 </div>
                             </div>
                             <div style="font-weight: 600; font-size: 1rem; color: @(item.Type == "Gain" ? "var(--accent-success)" : "var(--accent-danger)")">
-                                @(item.Type == "Gain" ? "+" : "-")@item.Amount.ToString("N2")
+                                @(item.Type == "Gain" ? "+" : "-")₹@item.Amount.ToString("N2")
                             </div>
                         </div>
                     }
                 </div>
             }
-            else
-            {
-                <div style="text-align: center; padding: 2rem 0; color: var(--text-muted);">
-                    <i class="fa-regular fa-folder-open" style="font-size: 2rem; margin-bottom: 1rem; opacity: 0.5;"></i>
-                    <p>No transactions recorded recently.</p>
-                </div>
-            }
         </div>
 
-        <!-- Analysis -->
         <div class="finance-card">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
                 <h3 style="margin:0;">Analysis</h3>
                 <select onchange="window.location.href='?timeframe=' + this.value" class="form-control" style="width: auto; padding: 4px 8px; font-size: 0.85rem;">
                     <option value="daily" selected="@(Model.TotalChange == "daily")">Today</option>
-                    <option value="weekly" selected="@(Model.TotalChange == "weekly")">7 Days</option>
-                    <option value="monthly" selected="@(Model.TotalChange == "monthly")">30 Days</option>
+                    <option value="thisWeek" selected="@(Model.TotalChange == "thisWeek")">This Week</option>
+                    <option value="lastWeek" selected="@(Model.TotalChange == "lastWeek")">Last Week</option>
+                    <option value="thisMonth" selected="@(Model.TotalChange == "thisMonth")">This Month</option>
+                    <option value="lastMonth" selected="@(Model.TotalChange == "lastMonth")">Last Month</option>
+                    <option value="thisYear" selected="@(Model.TotalChange == "thisYear")">Whole Year</option>
+                    <option value="all" selected="@(Model.TotalChange == "all")">All Time</option>
                 </select>
             </div>
 
@@ -135,7 +133,7 @@
                 <div style="position: relative; height: 160px; margin-top: 10px;">
                     <canvas id="spendingDonut"></canvas>
                     <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); pointer-events: none;">
-                        <strong style="font-size: 1.2rem; color: var(--accent-danger);">@Model.SpendingData.Values.Sum().ToString("C0")</strong>
+                        <strong style="font-size: 1.1rem; color: var(--accent-danger);">₹@Model.SpendingData.Values.Sum().ToString("N0")</strong>
                     </div>
                 </div>
             </div>
@@ -145,7 +143,7 @@
                 <div style="position: relative; height: 160px; margin-top: 10px;">
                     <canvas id="gainsDonut"></canvas>
                     <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); pointer-events: none;">
-                        <strong style="font-size: 1.2rem; color: var(--accent-success);">@Model.GainsData.Values.Sum().ToString("C0")</strong>
+                        <strong style="font-size: 1.1rem; color: var(--accent-success);">₹@Model.GainsData.Values.Sum().ToString("N0")</strong>
                     </div>
                 </div>
             </div>
@@ -155,107 +153,58 @@
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    document.addEventListener("DOMContentLoaded", function() {
-        Chart.defaults.color = '#94a3b8';
-        Chart.defaults.borderColor = 'rgba(255, 255, 255, 0.1)';
-        
-        const donutOptions = {
-            cutout: '75%',
-            maintainAspectRatio: false,
-            plugins: { legend: { display: false } }
-        };
+    document.addEventListener("DOMContentLoaded", function () {
+        const spendingData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.SpendingData));
+        const gainsData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.GainsData));
+        const historyData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.SpendingHistory));
 
-        // --- Line Chart (Spending Trends) ---
-        const ctxTrends = document.getElementById('spendingTrendsChart')?.getContext('2d');
-        if (ctxTrends) {
-            // Create gradient
-            let gradient = ctxTrends.createLinearGradient(0, 0, 0, 400);
-            gradient.addColorStop(0, 'rgba(99, 102, 241, 0.5)'); // Indigo
-            gradient.addColorStop(1, 'rgba(99, 102, 241, 0.0)');
+        // 1. Line Chart
+        const ctxTrends = document.getElementById('spendingTrendsChart').getContext('2d');
+        new Chart(ctxTrends, {
+            type: 'line',
+            data: {
+                labels: Object.keys(historyData),
+                datasets: [{
+                    label: 'Daily Spend',
+                    data: Object.values(historyData),
+                    borderColor: '#36A2EB',
+                    tension: 0.3,
+                    fill: false
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
 
-            new Chart(ctxTrends, {
-                type: 'line',
-                data: {
-                    labels: @Html.Raw(Json.Serialize(Model.SpendingHistory != null ? Model.SpendingHistory.Keys.ToList() : new List<string>())),
-                    datasets: [{
-                        label: 'Spending',
-                        data: @Html.Raw(Json.Serialize(Model.SpendingHistory != null ? Model.SpendingHistory.Values.ToList() : new List<decimal>())),
-                        borderColor: '#6366f1', // Indigo 500
-                        backgroundColor: gradient,
-                        borderWidth: 3,
-                        pointBackgroundColor: '#fff',
-                        pointBorderColor: '#6366f1',
-                        pointRadius: 4,
-                        pointHoverRadius: 6,
-                        fill: true,
-                        tension: 0.4
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: {
-                            mode: 'index',
-                            intersect: false,
-                            backgroundColor: 'rgba(15, 23, 42, 0.9)',
-                            titleColor: '#f8fafc',
-                            bodyColor: '#f8fafc',
-                            borderColor: 'rgba(255,255,255,0.1)',
-                            borderWidth: 1,
-                            padding: 10,
-                            displayColors: false
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            grid: { borderDash: [5, 5] },
-                            ticks: { callback: function(value) { return '$' + value; } }
-                        },
-                        x: {
-                            grid: { display: false }
-                        }
-                    }
-                }
-            });
-        }
+        // 2. Spending Donut
+        const ctxSpend = document.getElementById('spendingDonut').getContext('2d');
+        new Chart(ctxSpend, {
+            type: 'doughnut',
+            data: {
+                labels: Object.keys(spendingData),
+                datasets: [{
+                    data: Object.values(spendingData),
+                    backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF'],
+                    borderWidth: 0,
+                    cutout: '70%'
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+        });
 
-        // --- Spending Donut ---
-        const ctxSpend = document.getElementById('spendingDonut')?.getContext('2d');
-        if (ctxSpend) {
-            new Chart(ctxSpend, {
-                type: 'doughnut',
-                data: {
-                    labels: @Html.Raw(Json.Serialize(Model.SpendingData.Keys)),
-                    datasets: [{
-                        data: @Html.Raw(Json.Serialize(Model.SpendingData.Values)),
-                        backgroundColor: ['#ef4444', '#f59e0b', '#ec4899', '#8b5cf6', '#3b82f6'],
-                        borderWidth: 0,
-                        hoverOffset: 4
-                    }]
-                },
-                options: donutOptions
-            });
-        }
-
-        // --- Gains Donut ---
-        const ctxGain = document.getElementById('gainsDonut')?.getContext('2d');
-        if (ctxGain) {
-            new Chart(ctxGain, {
-                type: 'doughnut',
-                data: {
-                    labels: @Html.Raw(Json.Serialize(Model.GainsData.Keys)),
-                    datasets: [{
-                        data: @Html.Raw(Json.Serialize(Model.GainsData.Values)),
-                        backgroundColor: ['#10b981', '#0ea5e9', '#6366f1', '#14b8a6', '#84cc16'],
-                        borderWidth: 0,
-                        hoverOffset: 4
-                    }]
-                },
-                options: donutOptions
-            });
-        }
+        // 3. Gains Donut
+        const ctxGains = document.getElementById('gainsDonut').getContext('2d');
+        new Chart(ctxGains, {
+            type: 'doughnut',
+            data: {
+                labels: Object.keys(gainsData),
+                datasets: [{
+                    data: Object.values(gainsData),
+                    backgroundColor: ['#4BC0C0', '#36A2EB', '#9966FF', '#FFCE56', '#FF6384'],
+                    borderWidth: 0,
+                    cutout: '70%'
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+        });
     });
 </script>

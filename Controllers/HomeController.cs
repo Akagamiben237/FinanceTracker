@@ -21,9 +21,53 @@ namespace FinanceTracker.Controllers
 
         public IActionResult Index(string timeframe = "monthly")
         {
-            // ... (Your existing Index logic kept exactly the same)
             var allData = _context.Transactions?.ToList() ?? [];
+            DateTime now = DateTime.Now;
+            DateTime startDate;
+            DateTime endDate = now;
 
+            // 1. Precise Timeframe Logic
+            switch (timeframe)
+            {
+                case "daily":
+                    startDate = DateTime.Today;
+                    break;
+                case "thisWeek":
+                    // Find Monday of this week
+                    int diff = (7 + (now.DayOfWeek - DayOfWeek.Monday)) % 7;
+                    startDate = now.AddDays(-1 * diff).Date;
+                    break;
+                case "lastWeek":
+                    int lastWeekDiff = (7 + (now.DayOfWeek - DayOfWeek.Monday)) % 7 + 7;
+                    startDate = now.AddDays(-1 * lastWeekDiff).Date;
+                    endDate = startDate.AddDays(7).AddTicks(-1);
+                    break;
+                case "thisMonth":
+                    startDate = new DateTime(now.Year, now.Month, 1);
+                    break;
+                case "lastMonth":
+                    startDate = new DateTime(now.Year, now.Month, 1).AddMonths(-1);
+                    endDate = new DateTime(now.Year, now.Month, 1).AddTicks(-1);
+                    break;
+                case "thisYear":
+                    startDate = new DateTime(now.Year, 1, 1);
+                    break;
+                case "all":
+                    startDate = DateTime.MinValue;
+                    break;
+                case "weekly": // Last 7 days (rolling)
+                    startDate = now.AddDays(-7);
+                    break;
+                case "monthly": // Last 30 days (rolling)
+                default:
+                    startDate = now.AddDays(-30);
+                    break;
+            }
+
+            // 2. Filter data for the charts based on the calculated range
+            var chartData = allData.Where(t => t.TransactionDate >= startDate && t.TransactionDate <= endDate).ToList();
+
+            // 3. Balance calculations (All-Time for main cards)
             decimal totalGain = (decimal)allData.Where(t => t.Type == "Gain").Sum(t => t.Amount);
             decimal totalLoss = (decimal)allData.Where(t => t.Type == "Loss").Sum(t => t.Amount);
 
@@ -33,37 +77,31 @@ namespace FinanceTracker.Controllers
             decimal bankGain = (decimal)allData.Where(t => t.Source == "Bank" && t.Type == "Gain").Sum(t => t.Amount);
             decimal bankLoss = (decimal)allData.Where(t => t.Source == "Bank" && t.Type == "Loss").Sum(t => t.Amount);
 
-            DateTime cutoffDate = timeframe switch
-            {
-                "daily" => DateTime.Today,
-                "weekly" => DateTime.Today.AddDays(-7),
-                _ => DateTime.Today.AddDays(-30)
-            };
-
+            // 4. Monthly Budget Logic (Keep it fixed to the current calendar month)
             var budgetSetting = _context.ApplicationSettings?.FirstOrDefault(s => s.Key == "MonthlyBudget");
-            decimal monthlyGoal = budgetSetting != null && decimal.TryParse(budgetSetting.Value, out decimal val)
-                                  ? val
-                                  : 10000;
+            decimal monthlyGoal = budgetSetting != null && decimal.TryParse(budgetSetting.Value, out decimal val) ? val : 10000;
             decimal thisMonthSpend = (decimal)allData
-                .Where(t => t.Type == "Loss" && t.TransactionDate.Month == DateTime.Now.Month && t.TransactionDate.Year == DateTime.Now.Year)
+                .Where(t => t.Type == "Loss" && t.TransactionDate.Month == now.Month && t.TransactionDate.Year == now.Year)
                 .Sum(t => t.Amount);
 
             ViewBag.BudgetPercent = Math.Min((thisMonthSpend / monthlyGoal) * 100, 100);
             ViewBag.MonthlyGoal = monthlyGoal;
             ViewBag.ThisMonthSpend = thisMonthSpend;
 
-            var spendingByCategory = allData
-                .Where(t => t.Type == "Loss" && t.TransactionDate >= cutoffDate)
+            // 5. Chart Data (Using the filtered chartData list)
+            var spendingByCategory = chartData
+                .Where(t => t.Type == "Loss")
                 .GroupBy(t => t.Category ?? "Other")
                 .ToDictionary(g => g.Key, g => (decimal)g.Sum(t => t.Amount));
 
-            var gainsByCategory = allData
-                .Where(t => t.Type == "Gain" && t.TransactionDate >= cutoffDate)
+            var gainsByCategory = chartData
+                .Where(t => t.Type == "Gain")
                 .GroupBy(t => t.Category ?? "Other")
                 .ToDictionary(g => g.Key, g => (decimal)g.Sum(t => t.Amount));
 
-            var spendingHistory = allData
-                .Where(t => t.Type == "Loss" && t.TransactionDate >= cutoffDate)
+            var spendingHistory = chartData
+                .Where(t => t.Type == "Loss")
+                .OrderBy(t => t.TransactionDate)
                 .GroupBy(t => t.TransactionDate.ToString("MMM dd"))
                 .ToDictionary(g => g.Key, g => (decimal)g.Sum(t => t.Amount));
 
@@ -75,8 +113,7 @@ namespace FinanceTracker.Controllers
                 TotalBalance = totalGain - totalLoss,
                 CashBalance = cashGain - cashLoss,
                 BankBalance = bankGain - bankLoss,
-                RecentTransactions = allData.Where(t => t.TransactionDate.Date == lastDate.Date)
-                                            .OrderByDescending(t => t.Id).ToList(),
+                RecentTransactions = allData.OrderByDescending(t => t.TransactionDate).ThenByDescending(t => t.Id).Take(5).ToList(),
                 SpendingData = spendingByCategory,
                 GainsData = gainsByCategory,
                 SpendingHistory = spendingHistory,
@@ -174,6 +211,10 @@ namespace FinanceTracker.Controllers
         {
             var transaction = _context.Transactions.Find(id);
             if (transaction == null) return NotFound();
+
+            // ADD THIS: Fetch categories for the dynamic dropdown
+            ViewBag.Categories = _context.Categories.OrderBy(c => c.Name).ToList();
+
             return View(transaction);
         }
 
@@ -212,6 +253,7 @@ namespace FinanceTracker.Controllers
                 }
                 return RedirectToAction("Create", new { date = date });
             }
+            TempData["Success"] = "Record deleted successfully.";
             return RedirectToAction("Index");
         }
 
@@ -219,6 +261,10 @@ namespace FinanceTracker.Controllers
         {
             var query = _context.Transactions.AsQueryable();
 
+            // 1. Fetch Categories for the Dynamic Dropdown (Crucial Addition)
+            ViewBag.Categories = _context.Categories.OrderBy(c => c.Name).ToList();
+
+            // 2. Search Filter
             if (!string.IsNullOrEmpty(search))
             {
                 string s = search.Trim().ToLower();
@@ -229,24 +275,28 @@ namespace FinanceTracker.Controllers
                 );
             }
 
+            // 3. Category Filter
             if (!string.IsNullOrEmpty(category))
             {
                 string c = category.Trim().ToLower();
                 query = query.Where(t => t.Category != null && t.Category.ToLower().Contains(c));
             }
 
+            // 4. Type and Source Filters
             if (!string.IsNullOrEmpty(type))
                 query = query.Where(t => t.Type.ToLower() == type.ToLower());
 
             if (!string.IsNullOrEmpty(source))
                 query = query.Where(t => t.Source.ToLower() == source.ToLower());
 
+            // 5. Date and Month Filters
             if (!string.IsNullOrEmpty(date) && DateTime.TryParse(date, out DateTime filterDate))
                 query = query.Where(t => t.TransactionDate.Date == filterDate.Date);
 
             if (month.HasValue && month > 0)
                 query = query.Where(t => t.TransactionDate.Month == month.Value);
 
+            // 6. Persist state for the UI
             ViewBag.CurrentSearch = search;
             ViewBag.CurrentType = type;
             ViewBag.CurrentCategory = category;
@@ -256,7 +306,6 @@ namespace FinanceTracker.Controllers
 
             return View(query.OrderByDescending(t => t.TransactionDate).ToList());
         }
-
         public IActionResult ExportToCSV()
         {
             var builder = new System.Text.StringBuilder();
@@ -275,7 +324,14 @@ namespace FinanceTracker.Controllers
         [HttpPost]
         public async Task<IActionResult> ImportCSV(IFormFile file)
         {
-            if (file == null || file.Length == 0) return BadRequest("Please select a file.");
+            if (file == null || file.Length == 0)
+            {
+                TempData["Error"] = "No file selected. Please upload a valid CSV.";
+                return RedirectToAction("Index");
+            }
+
+            int successCount = 0;
+            int duplicateCount = 0;
 
             try
             {
@@ -283,51 +339,64 @@ namespace FinanceTracker.Controllers
                 using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
                 {
                     var records = csv.GetRecords<dynamic>().ToList();
-
-                    // Fetch existing data once to compare and speed up the process
                     var existingTransactions = _context.Transactions.ToList();
 
                     foreach (var row in records)
                     {
                         var dict = (IDictionary<string, object>)row;
 
+                        // Check for missing columns (Format Issue)
+                        if (!dict.ContainsKey("Date") || !dict.ContainsKey("Amount") || !dict.ContainsKey("Title"))
+                        {
+                            TempData["Error"] = "Format Issue: Missing required columns (Date, Amount, or Title).";
+                            return RedirectToAction("Index");
+                        }
+
                         DateTime date = DateTime.Parse(dict["Date"].ToString());
                         string title = dict["Title"].ToString();
                         float amount = float.Parse(dict["Amount"].ToString(), CultureInfo.InvariantCulture);
 
-                        // DUPLICATE CHECK: See if this exact record already exists
+                        // Duplicate check logic
                         bool isDuplicate = existingTransactions.Any(t =>
                             t.TransactionDate.Date == date.Date &&
                             t.Title == title &&
-                            Math.Abs(t.Amount - amount) < 0.01 // Use a small margin for float comparison
-                        );
+                            Math.Abs(t.Amount - amount) < 0.01);
 
-                        if (!isDuplicate)
+                        if (isDuplicate)
                         {
-                            var transaction = new Transaction
-                            {
-                                TransactionDate = date,
-                                Title = title,
-                                Amount = amount,
-                                Type = dict["Type"].ToString(),
-                                Source = dict["Source"].ToString(),
-                                Category = dict["Category"].ToString()
-                            };
-
-                            _context.Transactions.Add(transaction);
+                            duplicateCount++;
+                            continue;
                         }
+
+                        var transaction = new Transaction
+                        {
+                            TransactionDate = date,
+                            Title = title,
+                            Amount = amount,
+                            Type = dict["Type"]?.ToString() ?? "Loss",
+                            Source = dict["Source"]?.ToString() ?? "Cash",
+                            Category = dict["Category"]?.ToString() ?? "Other"
+                        };
+
+                        _context.Transactions.Add(transaction);
+                        successCount++;
                     }
                     await _context.SaveChangesAsync();
                 }
-                return RedirectToAction("Records");
-            }
-            catch (Exception)
-            {
-                TempData["Error"] = "Import failed. Check CSV format.";
-                return RedirectToAction("Records");
-            }
-        }
 
+                TempData["Success"] = $"Import successful! Added: {successCount} | Skipped (Duplicates): {duplicateCount}";
+            }
+            catch (FormatException)
+            {
+                TempData["Error"] = "Format Issue: Invalid data found. Check your dates and numbers.";
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = "Import failed: " + ex.Message;
+            }
+
+            return RedirectToAction("Index");
+        }
         public IActionResult Settings()
         {
             var budgetSetting = _context.ApplicationSettings?.FirstOrDefault(s => s.Key == "MonthlyBudget");

@@ -1,61 +1,41 @@
 @model List<FinanceTracker.Models.Transaction>
 
-@functions {
-    public string GetIcon(string category)
-    {
-        return category switch
-        {
-            "Food" => "🍕",
-            "Fuel" => "⛽",
-            "Grocery" => "🛒",
-            "Rent" => "🏠",
-            "Medical" => "🏥",
-            "Salary" => "💰",
-            "Business" => "🏢",
-            "Freelance" => "🧑‍💻",
-            "Stocks" => "📈",
-            "Dividends" => "💹",
-            "Crypto" => "🪙",
-            "Interest" => "🏦",
-            "RentalIncome" => "🏘️",
-            _ => "📦"
-        };
-    }
+@{
+    ViewData["Title"] = "Manage Records";
+    // Fetch categories from ViewBag to use for icons and the dropdown
+    var categories = ViewBag.Categories as List<FinanceTracker.Models.Category> ?? new List<FinanceTracker.Models.Category>();
 }
 
 <div class="main-content">
     <div class="finance-card">
-        <h3>Manage All Records</h3>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h3 style="margin:0;">Manage All Records</h3>
+            <span class="text-muted">Found @Model.Count records</span>
+        </div>
 
-        <form method="get" asp-action="Records" class="finance-card" style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px;">
+        @* --- FILTER FORM --- *@
+        <form method="get" asp-action="Records" class="finance-card" style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; background: rgba(255,255,255,0.02);">
 
-            <input type="text" name="search" value="@ViewBag.CurrentSearch" placeholder="Search Title..." class="form-control" style="flex: 2;" />
+            <input type="text" name="search" value="@ViewBag.CurrentSearch" placeholder="Search Title..." class="form-control" style="flex: 2; min-width: 200px;" />
 
-            <input type="date" name="date" value="@ViewBag.CurrentDate" class="form-control" style="flex: 1;" />
+            <input type="date" name="date" value="@ViewBag.CurrentDate" class="form-control" style="flex: 1; min-width: 150px;" />
 
             @* 1. TYPE SELECT *@
             <select name="type" id="typeSelect" class="form-control" style="flex: 1;">
                 <option value="">All Types</option>
-                <option value="Gain" selected="@(ViewBag.CurrentType == "Gain" ? "selected" : null)">Gains</option>
-                <option value="Loss" selected="@(ViewBag.CurrentType == "Loss" ? "selected" : null)">Losses</option>
+                <option value="Gain" selected="@(ViewBag.CurrentType == "Gain" ? "selected" : null)">Gains (₹)</option>
+                <option value="Loss" selected="@(ViewBag.CurrentType == "Loss" ? "selected" : null)">Losses (₹)</option>
             </select>
 
-            @* 2. CATEGORY SELECT (Mirrors Create.cshtml exactly) *@
+            @* 2. DYNAMIC CATEGORY SELECT (Fetched from DB) *@
             <select name="category" id="categorySelect" class="form-control" style="flex: 1;">
                 <option value="" data-type="both">All Categories</option>
-                <option value="Food" data-type="Loss">🍕 Food / Dining</option>
-                <option value="Fuel" data-type="Loss">⛽ Fuel / Transport</option>
-                <option value="Grocery" data-type="Loss">🛒 Grocery</option>
-                <option value="Rent" data-type="Loss">🏠 Rent / Housing</option>
-                <option value="Medical" data-type="Loss">🏥 Health / Medical</option>
-                <option value="Salary" data-type="Gain">💰 Salary</option>
-                <option value="Business" data-type="Gain">🏢 Business Income</option>
-                <option value="Freelance" data-type="Gain">🧑‍💻 Freelance / Side Hustle</option>
-                <option value="Stocks" data-type="Gain">📈 Stocks / Trading</option>
-                <option value="Dividends" data-type="Gain">💹 Dividends</option>
-                <option value="Crypto" data-type="Gain">🪙 Crypto</option>
-                <option value="Interest" data-type="Gain">🏦 Interest</option>
-                <option value="RentalIncome" data-type="Gain">🏘️ Rental Income</option>
+                @foreach (var cat in categories)
+                {
+                    <option value="@cat.Name" data-type="@cat.Type" selected="@(ViewBag.CurrentCategory == cat.Name ? "selected" : null)">
+                        @cat.Icon @cat.Name
+                    </option>
+                }
                 <option value="Other" data-type="both">📦 Other</option>
             </select>
 
@@ -65,68 +45,91 @@
                 <option value="Bank" selected="@(ViewBag.CurrentSource == "Bank" ? "selected" : null)">Bank</option>
             </select>
 
-            <button type="submit" class="btn-primary">Apply</button>
-            <a href="/Home/Records" class="btn-secondary" style="text-decoration:none; padding-top:8px; text-align:center;">Reset</a>
+            <div style="display: flex; gap: 10px; flex: 1;">
+                <button type="submit" class="btn-primary" style="flex: 1;">Apply</button>
+                <a href="/Home/Records" class="btn-secondary" style="text-decoration:none; padding-top:8px; text-align:center; flex: 1;">Reset</a>
+            </div>
         </form>
 
+        @* --- TABLE --- *@
         <div class="transaction-list">
-            <table>
+            <table style="width: 100%; border-collapse: collapse;">
                 <thead>
-                    <tr>
-                        <th>Date</th>
-                        <th>Title</th>
-                        <th>Category</th>
-                        <th>Source</th>
-                        <th>Amount</th>
-                        <th>Actions</th>
+                    <tr style="text-align: left; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                        <th style="padding: 12px;">Date</th>
+                        <th style="padding: 12px;">Title</th>
+                        <th style="padding: 12px;">Category</th>
+                        <th style="padding: 12px;">Source</th>
+                        <th style="padding: 12px;">Amount</th>
+                        <th style="padding: 12px;">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach (var item in Model)
                     {
-                        <tr>
-                            <td>@item.TransactionDate.ToString("MMM dd, yyyy")</td>
-                            <td><strong>@GetIcon(item.Category) @item.Title</strong></td>
-                            <td>@item.Category</td>
-                            <td>@item.Source</td>
-                            <td style="font-weight:bold; color: @(item.Type == "Gain" ? "var(--accent-success)" : "var(--accent-danger)")">
-                                @(item.Type == "Gain" ? "+" : "-") @item.Amount.ToString("N2")
+                        var categoryIcon = categories.FirstOrDefault(c => c.Name == item.Category)?.Icon ?? "📦";
+
+                        <tr class="transaction-row" style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                            <td style="padding: 12px;">@item.TransactionDate.ToString("MMM dd, yyyy")</td>
+                            <td style="padding: 12px;">
+                                <strong>@categoryIcon @item.Title</strong>
                             </td>
-                            <td>
-                                <a href="/Home/Edit/@item.Id" style="color: var(--accent-primary); margin-right: 10px; text-decoration: none;">Edit</a>
+                            <td style="padding: 12px;"><span class="badge">@item.Category</span></td>
+                            <td style="padding: 12px;">@item.Source</td>
+                            <td style="padding: 12px; font-weight:bold; color: @(item.Type == "Gain" ? "var(--accent-success)" : "var(--accent-danger)")">
+                                @(item.Type == "Gain" ? "+" : "-") ₹@item.Amount.ToString("N2")
+                            </td>
+                            <td style="padding: 12px;">
+                                <a href="/Home/Edit/@item.Id" style="color: var(--accent-primary); margin-right: 15px; text-decoration: none;">
+                                    <i class="fa-solid fa-pen-to-square"></i> Edit
+                                </a>
                                 <a href="/Home/Delete/@item.Id?returnUrl=/Home/Records"
                                    style="color: var(--accent-danger); text-decoration: none;"
-                                   onclick="return confirm('Delete this record?')">Delete</a>
+                                   onclick="return confirm('Permanently delete this record?')">
+                                    <i class="fa-solid fa-trash-can"></i> Delete
+                                </a>
                             </td>
                         </tr>
                     }
                 </tbody>
             </table>
+
+            @if (!Model.Any())
+            {
+                <div style="text-align: center; padding: 40px; color: var(--text-muted);">
+                    <i class="fa-solid fa-magnifying-glass" style="font-size: 2rem; margin-bottom: 10px;"></i>
+                    <p>No records found matching your filters.</p>
+                </div>
+            }
+            <button onclick="window.print()" class="btn-secondary" style="margin-bottom: 20px;">
+                <i class="fa-solid fa-print"></i> Download PDF Report
+            </button>
         </div>
     </div>
 </div>
 
+@* --- JAVASCRIPT FOR DYNAMIC FILTERING --- *@
 <script>
     document.addEventListener("DOMContentLoaded", function () {
         const typeSelect = document.getElementById('typeSelect');
         const categorySelect = document.getElementById('categorySelect');
-        const options = Array.from(categorySelect.options);
+        const originalOptions = Array.from(categorySelect.options);
 
-        // This pulls the value we just saved in the Controller
         const currentCategory = "@ViewBag.CurrentCategory";
 
         function filterCategories(isInitialLoad = false) {
             const selectedType = typeSelect.value;
-            categorySelect.innerHTML = "";
 
-            options.forEach(option => {
+            // Clear and rebuild based on type
+            categorySelect.innerHTML = "";
+            originalOptions.forEach(option => {
                 const optType = option.getAttribute('data-type');
+                // Show if: Type matches, or it's 'both', or no type is selected
                 if (!selectedType || optType === selectedType || optType === "both") {
                     categorySelect.appendChild(option);
                 }
             });
 
-            // If we are loading the page, set it to the filtered value
             if (isInitialLoad && currentCategory) {
                 categorySelect.value = currentCategory;
             }
@@ -136,7 +139,7 @@
             filterCategories(false);
         });
 
-        // Run once on load with true to set the saved value
+        // Run on load
         filterCategories(true);
     });
 </script>

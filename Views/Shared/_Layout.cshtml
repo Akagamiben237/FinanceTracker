@@ -9,6 +9,18 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger" style="background: var(--accent-danger); color: white; padding: 10px; border-radius: 8px; margin-bottom: 20px;">
+            <i class="fa-solid fa-circle-exclamation"></i> @TempData["Error"]
+        </div>
+    }
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success" style="background: var(--accent-success); color: white; padding: 10px; border-radius: 8px; margin-bottom: 20px;">
+            <i class="fa-solid fa-check-double"></i> @TempData["Success"]
+        </div>
+    }
     <div class="sidebar">
         <h2><i class="fa-solid fa-wallet"></i> FinanceTracker</h2>
         <ul class="nav-links">
