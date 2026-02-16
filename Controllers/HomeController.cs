@@ -219,25 +219,44 @@ namespace FinanceTracker.Controllers
         }
 
         [HttpPost]
-        public IActionResult Edit(Transaction transaction, string returnUrl)
+        public IActionResult Edit(Transaction transaction, string? returnUrl)
         {
-            transaction.Amount = Math.Abs(transaction.Amount);
+            // 1. Remove returnUrl from validation check so it doesn't cause "Invalid data"
+            ModelState.Remove("returnUrl");
 
             if (ModelState.IsValid)
             {
-                _context.Transactions.Update(transaction);
-                _context.SaveChanges();
-
-                if (!string.IsNullOrEmpty(returnUrl))
+                try
                 {
-                    return Redirect(returnUrl);
-                }
+                    // 2. Update the existing record in DB
+                    _context.Transactions.Update(transaction);
+                    _context.SaveChanges();
 
-                return RedirectToAction("Records");
+                    TempData["Success"] = $"Record '{transaction.Title}' updated successfully!";
+
+                    // 3. Smart Redirect: Go back to source page or default to Records
+                    if (!string.IsNullOrEmpty(returnUrl))
+                    {
+                        return Redirect(returnUrl);
+                    }
+                    return RedirectToAction("Records");
+                }
+                catch (Exception ex)
+                {
+                    TempData["Error"] = "Database Error: " + ex.Message;
+                }
             }
+            else
+            {
+                // Debugging: If it still says invalid, this shows which field failed
+                var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage);
+                TempData["Error"] = "Validation Failed: " + string.Join(", ", errors);
+            }
+
+            // If we fail, reload categories for the dropdown and stay on the page
+            ViewBag.Categories = _context.Categories.OrderBy(c => c.Name).ToList();
             return View(transaction);
         }
-
         public IActionResult Delete(int id, string? returnUrl = null)
         {
             var transaction = _context.Transactions.Find(id);

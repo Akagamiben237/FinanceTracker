@@ -96,8 +96,8 @@
                                 @(item.Type == "Gain" ? "+" : "-")@item.Amount.ToString("N2")
                             </div>
 
-                            <a href="/Home/Edit/@item.Id"
-                               style="color: var(--accent-primary); text-decoration: none; font-size: 0.9rem; border: 1px solid var(--border-color); padding: 4px 12px; border-radius: 4px;">
+                            <a href="/Home/Edit/@item.Id?returnUrl=@Context.Request.Path@Context.Request.QueryString"
+                               class="btn-edit">
                                 Edit
                             </a>
 

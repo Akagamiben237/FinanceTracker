@@ -80,9 +80,12 @@
                                 @(item.Type == "Gain" ? "+" : "-") ₹@item.Amount.ToString("N2")
                             </td>
                             <td style="padding: 12px;">
-                                <a href="/Home/Edit/@item.Id" style="color: var(--accent-primary); margin-right: 15px; text-decoration: none;">
+                                <a href="/Home/Edit/@item.Id?returnUrl=@Context.Request.Path@Context.Request.QueryString"
+                                   class="btn-edit">
                                     <i class="fa-solid fa-pen-to-square"></i> Edit
                                 </a>
+
+                              
                                 <a href="/Home/Delete/@item.Id?returnUrl=/Home/Records"
                                    style="color: var(--accent-danger); text-decoration: none;"
                                    onclick="return confirm('Permanently delete this record?')">

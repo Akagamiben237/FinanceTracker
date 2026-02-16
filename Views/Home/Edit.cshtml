@@ -1,12 +1,18 @@
 ﻿@model FinanceTracker.Models.Transaction
 
+@{
+    ViewData["Title"] = "Edit Transaction";
+    // Capture the returnUrl from the URL parameters
+    var returnUrl = Context.Request.Query["returnUrl"].ToString();
+}
+
 <div class="main-content">
     <div class="finance-card">
         <h3>Edit Transaction</h3>
-        
-        <form asp-action="Edit" method="post">
+
+        @* 1. Pass returnUrl back to the Controller so it knows where to redirect *@
+        <form asp-action="Edit" asp-route-returnUrl="@returnUrl" method="post">
             <input type="hidden" asp-for="Id" />
-            <input type="hidden" name="returnUrl" value="@Context.Request.Query["returnUrl"]" />
 
             <div class="form-group mb-3">
                 <label>Title</label>
@@ -38,7 +44,6 @@
                             </option>
                         }
                     }
-                    <option value="Other" data-type="both">📦 Other</option>
                 </select>
             </div>
 
@@ -52,37 +57,48 @@
 
             <div class="form-group mb-4">
                 <label>Date</label>
-                <input asp-for="TransactionDate" type="date" class="form-control" required />
+                <input asp-for="TransactionDate" type="date" class="form-control" required
+                       value="@Model.TransactionDate.ToString("yyyy-MM-dd")" />
             </div>
 
-            <button type="submit" class="btn-primary">Update Transaction</button>
-            <a href="/Home/Records" class="btn-secondary">Cancel</a>
+            <div style="display: flex; gap: 10px;">
+                <button type="submit" class="btn-primary" style="flex: 1;">Update Transaction</button>
+                @* 2. If returnUrl is empty, default to History (Records) *@
+                <a href="@(string.IsNullOrEmpty(returnUrl) ? "/Home/Records" : returnUrl)"
+                   class="btn-secondary"
+                   style="flex: 1; text-decoration: none; text-align: center; display: flex; align-items: center; justify-content: center;">
+                    Cancel
+                </a>
+            </div>
         </form>
     </div>
 </div>
 
-@* Include the same JS as Create.cshtml so categories filter when you change Type *@
+@* Include the filtering logic so Category matches Type *@
 <script>
     document.addEventListener("DOMContentLoaded", function () {
         const typeSelect = document.getElementById('typeSelect');
         const categorySelect = document.getElementById('categorySelect');
         const options = Array.from(categorySelect.options);
 
-        function filterCategories() {
+        function filterCategories(isInitialLoad = false) {
             const selectedType = typeSelect.value;
-            const currentVal = categorySelect.value;
-            categorySelect.innerHTML = "";
+            const currentCategory = "@Model.Category";
 
+            categorySelect.innerHTML = "";
             options.forEach(option => {
                 const optType = option.getAttribute('data-type');
                 if (optType === selectedType || optType === "both") {
                     categorySelect.appendChild(option);
                 }
             });
-            categorySelect.value = currentVal;
+
+            if (isInitialLoad) {
+                categorySelect.value = currentCategory;
+            }
         }
 
-        typeSelect.addEventListener('change', filterCategories);
-        filterCategories(); // Run on load
+        typeSelect.addEventListener('change', () => filterCategories(false));
+        filterCategories(true);
     });
 </script>

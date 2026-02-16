@@ -57,7 +57,7 @@ namespace FinanceTracker.Controllers
 
                 TempData["Success"] = $"Category '{category.Name}' deleted. {orphanTransactions.Count} records moved to 'Other'.";
             }
-            return RedirectToAction("Index", "Categories"); // Redirects back to your Category list
+            return RedirectToAction("Index");
         }
     }
 }
