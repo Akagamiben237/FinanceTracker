@@ -38,13 +38,26 @@ namespace FinanceTracker.Controllers
 
         public IActionResult Delete(int id)
         {
-            var category = _context.Categories?.Find(id);
+            var category = _context.Categories.Find(id);
             if (category != null)
             {
-                _context.Categories?.Remove(category);
+                // 1. Find all transactions that were using this category
+                var orphanTransactions = _context.Transactions
+                    .Where(t => t.Category == category.Name)
+                    .ToList();
+
+                // 2. Re-assign them to "Other" before deleting the category
+                foreach (var trans in orphanTransactions)
+                {
+                    trans.Category = "Other"; // Or "Deleted Category"
+                }
+
+                _context.Categories.Remove(category);
                 _context.SaveChanges();
+
+                TempData["Success"] = $"Category '{category.Name}' deleted. {orphanTransactions.Count} records moved to 'Other'.";
             }
-            return RedirectToAction("Index");
+            return RedirectToAction("Index", "Categories"); // Redirects back to your Category list
         }
     }
 }
