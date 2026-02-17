@@ -9,32 +9,27 @@ using FinanceTracker.Models;
 using Microsoft.Extensions.Hosting;
 using System.Threading;
 
-// Create a unique name for your app lock
+// 1. Single Instance Logic: Prevents opening multiple copies of the same app
 using Mutex mutex = new Mutex(true, "FinanceTracker_Unique_Key", out bool isNewInstance);
 
 if (!isNewInstance)
 {
-    // Another instance is already running! 
-    // We can't easily get its port here, so we will stick to a FIXED port
-    // for this strategy to work perfectly.
+    // If already running, just open the browser and kill this second process
     Process.Start(new ProcessStartInfo { FileName = "http://127.0.0.1:5000", UseShellExecute = true });
-    return; // Close this second .exe immediately
+    return;
 }
-
 
 var builder = WebApplication.CreateBuilder(args);
 
-// FIX 1: Tell Kestrel to find ANY available port if port 5000 is busy
-// CHANGE THIS:
+// 2. FIXED PORT: Keeping it on 5000 so the "Single Instance" logic always works
 builder.WebHost.ConfigureKestrel(options =>
 {
-    // Use port 5000 consistently so the "Single Instance" logic knows where to go
-    options.Listen(System.Net.IPAddress.Loopback, 5000); 
+    options.Listen(System.Net.IPAddress.Loopback, 5000);
 });
-var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-var appFolder = Path.Combine(localAppData, "FinanceTracker");
-Directory.CreateDirectory(appFolder);
-var dbPath = Path.Combine(appFolder, "FinanceData.db");
+
+// 3. DATABASE REPAIR: Break the link to central AppData
+// This line makes the DB live in the SAME folder as your FinanceTracker.exe
+var dbPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "FinanceTracker.db");
 
 builder.Services.AddDbContext<FinanceDbContext>(options =>
     options.UseSqlite($"Data Source={dbPath}"));
@@ -44,6 +39,7 @@ builder.Services.AddControllersWithViews();
 
 var app = builder.Build();
 
+// 4. Ensure the database file is created locally on startup
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
@@ -55,7 +51,7 @@ app.UseStaticFiles();
 app.UseRouting();
 app.UseAuthorization();
 
-// FIX 2: Create a route that stops the .exe when called
+// 5. Shutdown Route: Allows closing the app gracefully
 app.MapPost("/shutdown", (IHostApplicationLifetime lifetime) =>
 {
     lifetime.StopApplication();
@@ -68,13 +64,13 @@ app.MapControllerRoute(
 
 app.MapRazorPages();
 
+// 6. Browser Auto-Launch
 app.Lifetime.ApplicationStarted.Register(() =>
 {
     try
     {
         var server = app.Services.GetRequiredService<IServer>();
         var addressesFeature = server.Features.Get<IServerAddressesFeature>();
-        // Get the first bound address (the one with the random port)
         var address = addressesFeature?.Addresses?.FirstOrDefault();
 
         if (!string.IsNullOrEmpty(address) && Environment.UserInteractive)
